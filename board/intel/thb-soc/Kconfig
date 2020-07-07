@@ -1,0 +1,48 @@
+if TARGET_THB_SOC
+
+config SYS_CONFIG_NAME
+	default "thb-soc"
+
+config ENABLE_MENDER
+	bool "Enable mender.io support in U-Boot for Thunder Bay"
+	help
+	  Enable this option to apply the changes to U-Boot required to
+	  support mender.io operation on Thunder Bay.
+
+config THUNDERBAY_EMULATION
+	bool "Enable FPGA-specific changes"
+	default y
+
+config CMD_VPU_BOOT
+	bool "Enable 'vpu' command"
+	depends on ARM_SMCCC
+	help
+	  A test-only command to trigger the boot of an VPU firmware
+	  loaded at a configurable location.
+
+config THUNDERBAY_MEM_PROTECT
+	bool "Enable Thunder Bay Memory protection."
+	default y
+	select BOARD_EARLY_INIT_R
+	help
+	  When enabled, U-Boot sets up a set of Isolated Memory Regions (IMRs)
+	  to protect critical assets in RAM (e.g., the Linux Kernel, the Device
+	  Tree, etc.).
+
+if THUNDERBAY_MEM_PROTECT
+
+config THUNDERBAY_MEM_PROTECT_U_BOOT
+	bool "Enable Thunder Bay memory protection on U-Boot."
+	default n
+	help
+	  When enabled, U-Boot will set up an IMR on the U-Boot region, including
+	  stack and malloc areas. However, these stack and malloc areas may be
+	  passed to hardware peripherals to access. This will trigger a reset.
+
+endif
+config  PLATFORM_THUNDERBAY
+        bool "Enable support for Thunderbay Platform"
+	help
+          Enable support for Thunderbay Platform
+        default n
+endif

@@ -1,0 +1,92 @@
+if ARCH_THB
+
+config TARGET_THB_SOC
+	bool "Support Thunder Bay Platform"
+	help
+	  Support for Thunder Bay platform.
+
+config SYS_BOARD
+	default "thb-soc" if TARGET_THB_SOC
+
+config SYS_CONFIG_NAME
+	default "thb-soc" if TARGET_THB_SOC
+
+config SYS_VENDOR
+	default "intel"
+
+config SYS_SOC
+	default "thb"
+
+config THUNDERBAY_SDHCI_MAX_FREQ
+	int "Sets the maximum frequency of the controller"
+	depends on MMC_SDHCI_THUNDERBAY
+	default 200000000
+
+config THUNDERBAY_SDHCI_MIN_FREQ
+	int "Sets the minimum frequency of the controller"
+	depends on MMC_SDHCI_THUNDERBAY
+	default 0
+	help
+	  Set the minimum frequency of the controller. If 0, the value
+	  will be calculated as max divided by maximum divider.
+
+config THUNDERBAY_SDHCI_ENABLE_HS
+	bool "Enables high speed mode in the controller."
+	default y
+
+config THUNDERBAY_SDHCI_ENABLE_SDR50
+	bool "Enables SDR50 mode in the controller."
+	default y
+
+config THUNDERBAY_SDHCI_ENABLE_DDR50
+	bool "Enables DDR50 mode in the controller."
+	default y
+
+config THUNDERBAY_SDHCI_ENABLE_SDR104
+	bool "Enables SDR104 mode in the controller."
+	default y
+
+config THUNDERBAY_SDHCI_ENABLE_HS400
+	bool "Enables HS400 mode in the controller."
+	default y
+
+config THUNDERBAY_PCIE_EP_MISC_VPU_BOOT
+	bool "Enable PCIe EP Misc VPU Boot driver on Thunder Bay Platform"
+	help
+	  Enable PCIe boot MISC driver to interface with PCIe
+	  hardware on Thunder Bay platform. Provides functions to
+	  read from and write to the communication BAR with the
+	  host. Provides methods of setting up and changing the
+	  communication BAR location in local memory, as well as
+	  performing DMA transactions from host memory to local
+	  memory.
+
+config CMD_THUNDERBAY_PCIE_BOOT
+	bool "Enable PCIe command boot on Thunder Bay Platform"
+	help
+	  Enable PCIe boot command on Thunder Bay Platform
+
+config CMD_THUNDERBAY_PCIE_RECOVERY_MMC
+        bool "Enable PCIe command to recover eMMC on ThunderBay Platform"
+        depends on MMC
+        help
+          Enable the PCIe eMMC command to recover the GPT, OS and file system
+          by flashing individual partitions based on commands given from the
+          host.
+
+config PCIE_RECOVERY_MMC_DEV
+        int "Define PCIe MMC FLASH default device"
+        depends on CMD_THUNDERBAY_PCIE_RECOVERY_MMC
+        help
+          The PCIe eMMC recovery boot requires information on the flash device
+          to store the images received.
+
+config CMD_THUNDERBAY_CLOCK_DEBUG_CONFIG
+	bool "Enable clock debug command on Thunder Bay Platform"
+	help
+	  Enable clock debug command on Thunder Bay Platform. The
+	  command accepts one argument which is the address of
+	  the clock message to be sent to the secure world, which
+	  behaves like an SCP. It will be printed out on screen
+
+endif

@@ -1,0 +1,1011 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * (C) Copyright 2017 Linaro
+ * Jorge Ramirez-Ortiz <jorge.ramirez-ortiz@linaro.org>
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
+ */
+
+#include <common.h>
+#include <image.h>
+#ifdef CONFIG_DEBUG_UART
+#include <debug_uart.h>
+#endif /* CONFIG_DEBUG_UART */
+#include <asm/arch/boot/platform_private.h>
+#include <asm/arch-thb/thb-boot-code.h>
+#include <asm/arch/sip_svc.h>
+#include <asm/io.h>
+#include <asm-generic/gpio.h>
+#include <dm.h>
+#include <dm/device-internal.h>
+#include <asm/armv8/mmu.h>
+#include <hash.h>
+#include <linux/libfdt.h>
+#include <fdtdec.h>
+#include <fdt_support.h>
+#include <mmc.h>
+#include <tpm-v2.h>
+#include <tpm-common.h>
+#include <version.h>
+#include "thb-imr.h"
+
+#define GPIO_MICRON_FLASH_PULL_UP	20
+
+#define THB_TPM_BL2_FROM_BL1_PCR_INDEX         0
+#define THB_TPM_BL2_PCR_INDEX                   1
+#define THB_TPM_FDT_PCR_INDEX                   2
+#define THB_TPM_BL33_PCR_INDEX                  4
+#define THB_TPM_KERNEL_PCR_INDEX                8
+
+#define SZ_8G                           0x200000000
+
+extern int get_tpm(struct udevice **devp);
+
+phys_size_t get_effective_memsize(void);
+
+DECLARE_GLOBAL_DATA_PTR;
+
+static struct mm_region thb_mem_map[] = {
+	{ /* Memory mapped registers: 0x8000_0000 - 0x8880_0000 */
+          .virt = 0x80000000UL,
+          .phys = 0x80000000UL,
+          .size = 0x8880000UL,
+	  .attrs = PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) | PTE_BLOCK_NON_SHARE |
+		   PTE_BLOCK_PXN |
+		   PTE_BLOCK_UXN },
+	{ /* Memory mapped registers: PCIe AXI base */
+          .virt = 0x2000000000UL,
+          .phys = 0x2000000000UL,
+          .size = 0x1000UL,
+	  .attrs = PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) | PTE_BLOCK_NON_SHARE |
+		   PTE_BLOCK_PXN |
+		   PTE_BLOCK_UXN },
+	{ /*
+	   * DRAM: set up page tables for:
+	   * Start of usable DDR: DDR_BASE + SECURE_DDR_SIZE
+	   * Across usable DDR size: UBOOT_SDRAM_SIZE
+	   *update the size based on dynamic detected RAM size in next release SK:*/
+	  .virt = (u64)CONFIG_SYS_SDRAM_BASE,
+	  .phys = (u64)CONFIG_SYS_SDRAM_BASE,
+	  .size = (u64)UBOOT_SDRAM_SIZE,
+	  .attrs = PTE_BLOCK_MEMTYPE(MT_NORMAL) | PTE_BLOCK_OUTER_SHARE },
+	{
+		/* Also map the memory shared with secured world. */
+		.virt = (u64)SHARED_DDR_BASE,
+		.phys = (u64)SHARED_DDR_BASE,
+		.size = (u64)SHARED_DDR_SIZE,
+		.attrs = PTE_BLOCK_MEMTYPE(MT_NORMAL) | PTE_BLOCK_OUTER_SHARE,
+	},
+	{
+		0,
+	}
+};
+
+struct mm_region *mem_map = thb_mem_map;
+
+struct fdt_string_prop {
+	const char *prop;
+	const char *value;
+};
+
+#define NUM_FIRMWARE_BIOS_PROPERTIES (5)
+static const struct fdt_string_prop
+	firmware_bios_properties[NUM_FIRMWARE_BIOS_PROPERTIES] = {
+		{ "system-manufacturer", CONFIG_SYS_VENDOR },
+		{ "system-product-name", CONFIG_SYS_BOARD },
+		{ "bios-vendor", "Intel" },
+		{ "bios-version", U_BOOT_VERSION },
+		{ "bios-release-date", U_BOOT_DATE " " U_BOOT_TIME },
+	};
+
+#define NUM_FIRMWARE_ATF_PROPERTIES (3)
+static const struct fdt_string_prop
+	firmware_atf_properties[NUM_FIRMWARE_ATF_PROPERTIES] = {
+		{ "arm-trusted-firmware-version", "v1.5" },
+		{ "arm-trusted-firmware-vendor", "Intel" },
+		{ "arm-trusted-firmware-release-date",
+		  U_BOOT_DATE " " U_BOOT_TIME },
+	};
+
+static platform_boot_intf_t boot_interface = MA_BOOT_INTF_EMMC;
+
+static int fdt_create_node_and_populate(void *fdt, int nodeoffset,
+					const char *nodestring, u32 array_size,
+					const struct fdt_string_prop *prop_arr)
+{
+	u32 i;
+	int ret;
+	int newnodeoffset;
+
+	/* Create "nodestring" @ nodeoffset, if it didn't exist. */
+	newnodeoffset = fdt_find_or_add_subnode(fdt, nodeoffset, nodestring);
+	if (newnodeoffset < 0) {
+		printf("Couldn't find or create node \"%s\".\n", nodestring);
+		return newnodeoffset;
+	}
+
+	/* Add our information. */
+	for (i = 0; i < array_size; i++) {
+		ret = fdt_setprop_string(fdt, newnodeoffset, prop_arr[i].prop,
+					 prop_arr[i].value);
+		if (ret < 0) {
+			printf("Couldn't add property: %s\n", prop_arr[i].prop);
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
+/*
+ * Add some board-specific data to the FDT before booting the
+ * OS.
+ */
+int ft_board_setup(void *fdt, struct bd_info *bd)
+{
+	int offset = 0;
+	int ret = 0;
+
+	/* Add information about firmware to DT. */
+
+	/* Create "/firmware" if it didn't exist. */
+	offset = fdt_find_or_add_subnode(fdt, 0, "firmware");
+	if (offset < 0) {
+		printf("Couldn't find or create /firmware.\n");
+		return offset;
+	}
+
+	/* Create and populate "/firmware/bios" */
+	ret = fdt_create_node_and_populate(fdt, offset, "bios",
+					   NUM_FIRMWARE_BIOS_PROPERTIES,
+					   firmware_bios_properties);
+	if (ret < 0)
+		return ret;
+
+	/* Create and populate "/firmware/arm-trusted-firmware" */
+	ret = fdt_create_node_and_populate(fdt, offset, "arm-trusted-firmware",
+					   NUM_FIRMWARE_ATF_PROPERTIES,
+					   firmware_atf_properties);
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
+/*
+ * We want that the device tree appended to the U-Boot image,
+ */
+static void setup_fdt(void)
+{
+	/*
+	 * Make sure to clear fdt_addr_r, this will trigger
+	 * sysboot to go and load fdtfile into fdt_addr_r.
+	 */
+	if (env_get("fdt_addr_r")) {
+		printf("Clearing fdt_addr_r.\n");
+		env_set("fdt_addr_r", NULL);
+	}
+
+	/* Set FDT as the one at the end of U-Boot. */
+	printf("Setting fdt_addr to 0x%p.\n", gd->fdt_blob);
+	env_set_hex("fdt_addr", (unsigned long)gd->fdt_blob);
+}
+
+int board_boot_fail(unsigned int code)
+{
+        printf("Boot failed due to 0x%x - halting boot.\n", code);
+        hang();
+}
+
+/*
+ * Retrieve an area that can be shared with the secure world for
+ * communication.
+ */
+static void __iomem *get_secure_shmem_ptr(size_t min_size)
+{
+	int offset = 0;
+	fdt_addr_t shmem_addr;
+	fdt_size_t shmem_size;
+
+	offset = fdt_subnode_offset(gd->fdt_blob, 0, "general_sec_shmem");
+	if (offset < 0) {
+		printf("Couldn't find general_sec_shmem.\n");
+		return NULL;
+	}
+
+	offset = fdtdec_lookup_phandle(gd->fdt_blob, offset, "shmem");
+	if (offset < 0) {
+		printf("No shared memory defined for this device.\n");
+		return NULL;
+	}
+
+	shmem_addr = fdtdec_get_addr_size_auto_parent(gd->fdt_blob,
+						      0, offset, "reg",
+						      0, &shmem_size, true);
+	if (shmem_addr == FDT_ADDR_T_NONE) {
+		printf("No memory found.\n");
+		return NULL;
+	}
+
+	if (min_size > shmem_size)
+		return NULL;
+
+	return (void __iomem *)shmem_addr;
+}
+
+static int measure_boot_kernel_fdt(ocs_hash_alg_t hash_alg)
+{
+	struct udevice *dev;
+	/*
+	 * Note: The 'images' variable is declared in image.h and defined in
+	 * bootm.c.
+	 */
+	image_info_t *os = &images.os;
+	struct hash_algo *thb_hash_algo;
+
+	/* SHA256_SIZE is maxmium size supported for measure boot */
+	u8 kernel_hash[SHA256_SIZE];
+	u8 fdt_hash[SHA256_SIZE];
+	int rc;
+
+	debug("%s: image load at %lx, size: %lx\n", __func__,
+	      os->load, os->image_len);
+
+	rc = get_tpm(&dev);
+	if (rc)
+		return rc;
+
+	if(hash_alg == OCS_HASH_SHA256) {
+		rc = hash_lookup_algo("sha256", &thb_hash_algo);
+	}
+	if(hash_alg == OCS_HASH_SHA384) {
+		rc = hash_lookup_algo("sha384", &thb_hash_algo);
+	}
+	if (rc) {
+		printf("Hash algorithm look up failed\n");
+		return -EINVAL;
+	}
+
+	debug("%s: %s selected for measure boot hash alg\n", __func__,
+	      thb_hash_algo->name);
+
+	thb_hash_algo->hash_func_ws((void *)os->load, os->image_len,
+				    kernel_hash, thb_hash_algo->chunk_size);
+
+	if(hash_alg == OCS_HASH_SHA256) {
+		printf("Measured boot SHA256: Writing to THB_TPM_KERNEL_PCR_INDEX ...\n");
+		rc = tpm2_pcr_extend(dev, THB_TPM_KERNEL_PCR_INDEX, TPM2_ALG_SHA256, kernel_hash, TPM2_DIGEST_LEN);
+	}
+	if(hash_alg == OCS_HASH_SHA384) {
+		printf("Measured boot SHA384: Writing to THB_TPM_KERNEL_PCR_INDEX ...\n");
+#ifdef THB_SECURITY_FEATURE
+		rc = tpm2_pcr_extend_sha384(dev, THB_TPM_KERNEL_PCR_INDEX, kernel_hash);
+#endif
+	}
+	if (rc) {
+		printf("%s: tpm2_pcr_extend failed ret %d\n", __func__, rc);
+		return -EINVAL;
+	}
+
+	printf("Measured boot : Writing to THB_TPM_KERNEL_PCR_INDEX ...SUCCESS\n");
+	thb_hash_algo->hash_func_ws((void *)images.ft_addr, images.ft_len,
+				    fdt_hash, thb_hash_algo->chunk_size);
+
+	if(hash_alg == OCS_HASH_SHA256) {
+		printf("Measured boot SHA256: Writing to THB_TPM_FDT_PCR_INDEX...\n");
+		rc = tpm2_pcr_extend(dev, THB_TPM_FDT_PCR_INDEX, TPM2_ALG_SHA256, fdt_hash, TPM2_DIGEST_LEN);
+	}
+	if(hash_alg == OCS_HASH_SHA384) {
+		printf("Measured boot SHA384: Writing to THB_TPM_FDT_PCR_INDEX...\n");
+#ifdef THB_SECURITY_FEATURE
+		rc = tpm2_pcr_extend_sha384(dev, THB_TPM_FDT_PCR_INDEX, fdt_hash);
+#endif
+	}
+	if (rc) {
+		printf("%s: tpm2_pcr_extend failed ret %d\n", __func__, rc);
+		return -EINVAL;
+	}
+	 printf("Measured boot : Writing to THB_TPM_FDT_PCR_INDEX...SUCCESS\n");
+	return 0;
+}
+
+/**
+ * get_bl_ctx() - Get BL context.
+ * @bl_ctx: Where to store the retrieved context.
+ *
+ * Get the BL context (which includes various information, such as the platform
+ * data and BL2+BL31+BL32+BL33 hash) from the runtime monitor.
+ *
+ * Return: 0 on success, negative error code otherwise.
+ */
+static int get_bl_ctx(platform_bl_ctx_t *bl_ctx)
+{
+        platform_bl_ctx_t *shmem_bl_ctx = NULL;
+	int rc = 0;
+
+	if (!bl_ctx)
+		return -EINVAL;
+
+        shmem_bl_ctx = get_secure_shmem_ptr(sizeof(*shmem_bl_ctx));
+        if (!shmem_bl_ctx) {
+                printf("No shared mem for communicating with secure world.\n");
+                return -ENOMEM;
+        }
+
+	/* Set to zero */
+        memset(shmem_bl_ctx, 0x0, sizeof(*shmem_bl_ctx));
+
+	/* Request the information from the secure world */
+        rc = sip_svc_get_bl_ctx((uintptr_t)shmem_bl_ctx, sizeof(*shmem_bl_ctx));
+        if (rc) {
+                printf("Failed to retrieve boot context.\n");
+                return -EINVAL;
+        }
+
+        if (sizeof(*shmem_bl_ctx) != shmem_bl_ctx->ctx_size) {
+                printf("Context size inconsistent.\n");
+                return -EPROTO;
+        }
+
+	memcpy(bl_ctx, shmem_bl_ctx, sizeof(*bl_ctx));
+
+	return 0;
+
+}
+/*
+ * Query the platform BL context, which includes various information,
+ * retrieve firmware hash algo used in ROM and the digests of
+ * secure world and normal world.
+ */
+static int measure_boot_bl2(ocs_hash_alg_t *hash_alg)
+{
+	platform_bl_ctx_t *bl_ctx = NULL;
+	int rc = 0;
+	struct udevice *dev;
+
+	rc = get_tpm(&dev);
+	if (rc)
+		return rc;
+
+	bl_ctx = get_secure_shmem_ptr(sizeof(*bl_ctx));
+	if (!bl_ctx) {
+		printf("No shared mem for communicating with secure world.\n");
+		return -EINVAL;
+	}
+
+	/* Set to zero */
+	memset(bl_ctx, 0x0, sizeof(*bl_ctx));
+
+	/* Request the information from the secure world */
+	rc = sip_svc_get_bl_ctx((uintptr_t)bl_ctx, sizeof(*bl_ctx));
+	if (rc) {
+		printf("Failed to retrieve boot context.\n");
+		return -EINVAL;
+	}
+
+	if (sizeof(*bl_ctx) != bl_ctx->ctx_size) {
+		printf("Context size inconsistent.\n");
+		return -EINVAL;
+	}
+
+	switch (bl_ctx->tpm_hash_alg_type) {
+	case OCS_HASH_SHA256:
+		debug("%s: hash alg %d tpm_secure_world_digest: %p\n",
+		      __func__,
+		      bl_ctx->tpm_hash_alg_type,
+		      bl_ctx->tpm_secure_world_digest);
+
+		printf("Measured boot SHA256: Writing to THB_TPM_BL2_FROM_BL1_PCR_INDEX...\n");
+		rc = tpm2_pcr_extend(dev, THB_TPM_BL2_FROM_BL1_PCR_INDEX, TPM2_ALG_SHA256,
+                                    bl_ctx->tpm_secure_world_bl2_digest, TPM2_DIGEST_LEN);
+                if (rc) {
+                        printf("%s: tpm2_pcr_extend failed ret %d\n",
+                               __func__, rc);
+                        return -EINVAL;
+                }
+
+		printf("Measured boot : Writing to THB_TPM_BL2_FROM_BL1_PCR_INDEX...SUCCESS\n");
+                printf("Measured boot SHA256: Writing to THB_TPM_BL2_PCR_INDEX...\n");
+
+		rc = tpm2_pcr_extend(dev, THB_TPM_BL2_PCR_INDEX, TPM2_ALG_SHA256,
+				     bl_ctx->tpm_secure_world_digest, TPM2_DIGEST_LEN);
+		if (rc) {
+			printf("%s: tpm2_pcr_extend failed ret %d\n",
+			       __func__, rc);
+			return -EINVAL;
+		}
+		printf("Measured boot : Writing to THB_TPM_BL2_PCR_INDEX... SUCCESS\n");
+		debug("%s: tpm_normal_world_digest: %p\n", __func__,
+		      bl_ctx->tpm_normal_world_digest);
+
+		printf("Measured boot SHA256: Writing to THB_TPM_BL33_PCR_INDEX...\n");
+		rc = tpm2_pcr_extend(dev, THB_TPM_BL33_PCR_INDEX, TPM2_ALG_SHA256,
+				     bl_ctx->tpm_normal_world_digest, TPM2_DIGEST_LEN);
+		if (rc) {
+			printf("%s: tpm2_pcr_extend failed ret %d\n",
+			       __func__, rc);
+			return -EINVAL;
+		}
+		printf("Measured boot : Writing to THB_TPM_BL33_PCR_INDEX...SUCCESS\n");
+		*hash_alg = bl_ctx->tpm_hash_alg_type;
+		return 0;
+	/* Only SHA256 is supported in tpm2_pcr_extend */
+	case OCS_HASH_SHA384:
+	/* platform_bl_ctx stores up hash size to SHA384_SIZE,
+	 * SHA512 is not supported
+	 */
+	               debug("%s: hash alg %d tpm_secure_world_digest: %p , tpm_secure_world_bl2_digest %p\n",
+                      __func__,
+                      bl_ctx->tpm_hash_alg_type,
+                      bl_ctx->tpm_secure_world_digest,
+                      bl_ctx->tpm_secure_world_bl2_digest);
+
+		printf("Measured boot SHA384: Writing to THB_TPM_BL2_FROM_BL1_PCR_INDEX...\n");
+#ifdef THB_SECURITY_FEATURE
+               rc = tpm2_pcr_extend_sha384(dev, THB_TPM_BL2_FROM_BL1_PCR_INDEX,
+                                    bl_ctx->tpm_secure_world_bl2_digest);
+                if (rc) {
+                        printf("%s: tpm2_pcr_extend failed ret %d\n",
+                               __func__, rc);
+                        return -EINVAL;
+                }
+#endif
+
+		printf("Measured boot : Writing to THB_TPM_BL2_FROM_BL1_PCR_INDEX...SUCCESS\n");
+		printf("Measured boot SHA384: Writing to THB_TPM_BL2_PCR_INDEX...\n");
+#ifdef THB_SECURITY_FEATURE
+                rc = tpm2_pcr_extend_sha384(dev, THB_TPM_BL2_PCR_INDEX,
+                                     bl_ctx->tpm_secure_world_digest);
+                if (rc) {
+                        printf("%s: tpm2_pcr_extend failed ret %d\n",
+                               __func__, rc);
+                        return -EINVAL;
+                }
+#endif
+
+		printf("Measured boot : Writing to THB_TPM_BL2_PCR_INDEX... SUCCESS\n");
+                debug("%s: tpm_normal_world_digest: %p\n", __func__,
+                      bl_ctx->tpm_normal_world_digest);
+
+		printf("Measured boot SHA384: Writing to THB_TPM_BL33_PCR_INDEX...\n");
+#ifdef THB_SECURITY_FEATURE
+                rc = tpm2_pcr_extend_sha384(dev, THB_TPM_BL33_PCR_INDEX,
+                                     bl_ctx->tpm_normal_world_digest);
+                if (rc) {
+                        printf("%s: tpm2_pcr_extend failed ret %d\n",
+                               __func__, rc);
+                        return -EINVAL;
+                }
+#endif
+
+		printf("Measured boot : Writing to THB_TPM_BL33_PCR_INDEX...SUCCESS\n");
+                *hash_alg = bl_ctx->tpm_hash_alg_type;
+                return 0;
+
+	case OCS_HASH_SHA512:
+	default:
+		printf("%s: Invalid algorithm type\n", __func__);
+		return -EINVAL;
+	}
+
+	return -EINVAL;
+}
+
+/**
+ * get_bl1_ctx() - Get BL1 context.
+ * @bl1_ctx: Where to store the retrieved context.
+ *
+ * Get the BL1 context (which includes various information, such as the boot
+ * interface used by BL1) from the runtime monitor.
+ *
+ * Return: 0 on success, negative error code otherwise.
+ */
+static int get_bl1_ctx(platform_bl1_ctx_t *bl1_ctx)
+{
+	platform_bl1_ctx_t *shmem_bl1_ctx = NULL;
+	int rc = 0;
+
+	if (!bl1_ctx)
+		return -EINVAL;
+
+	shmem_bl1_ctx = get_secure_shmem_ptr(sizeof(*shmem_bl1_ctx));
+	if (!shmem_bl1_ctx) {
+		printf("No shared mem for communicating with secure world.\n");
+		return -ENOMEM;
+	}
+
+	/* Set to zero */
+	memset(shmem_bl1_ctx, 0x0, sizeof(*shmem_bl1_ctx));
+
+	/* Request the information from the secure world */
+	rc = sip_svc_get_bl1_ctx((uintptr_t)shmem_bl1_ctx,
+				 sizeof(*shmem_bl1_ctx));
+	if (rc) {
+		printf("Failed to retrieve boot context.\n");
+		return rc;
+	}
+
+	if (sizeof(*shmem_bl1_ctx) != shmem_bl1_ctx->ctx_size) {
+		printf("Context size inconsistent.\n");
+		printf("Definitions are out of sync.\n");
+		return -EPROTO;
+	}
+
+	memcpy(bl1_ctx, shmem_bl1_ctx, sizeof(*bl1_ctx));
+
+	return 0;
+}
+
+/*
+ * Inform which mode is chosen, and set up the environment to trigger
+ * the correct environment.
+ */
+static void set_boot_env_config(const char *boot_mode, const char *bootcmd,
+				const char *bootargs)
+{
+	env_set("bootcmd", bootcmd);
+	env_set("bootargs", bootargs);
+}
+
+/*
+ * Configure the bootcmd for our board.
+ */
+static void setup_boot_mode(void)
+{
+	platform_bl1_ctx_t bl1_ctx;
+	int rc;
+
+	/* TODO: handle OS recovery mode once flow is defined. */
+	rc = get_bl1_ctx(&bl1_ctx);
+	/* TODO: U-boot is not able to get the context from Optee
+	 * correctly. Porting to 64-bit is required.
+	 */
+	if (rc)
+	{
+		panic("Failed to retrieve bl1 ctx, Boot interface selection failed\n");
+	}else
+	{
+		boot_interface = bl1_ctx.boot_interface;
+	}
+
+	switch (boot_interface) {
+	case MA_BOOT_INTF_EMMC:
+		pr_info("Boot Interface :eMMC\n");
+		config_dtb_blob();
+		set_boot_env_config("eMMC", THB_EMMC_BOOTCMD,
+				    THB_EMMC_BOOTARGS);
+		break;
+	case MA_BOOT_INTF_PCIE:
+		pr_info("Boot Interface :PCIe\n");
+		set_boot_env_config("PCIe", THB_PCIE_BOOTCMD,
+				    THB_PCIE_BOOTARGS);
+		break;
+	case MA_BOOT_INTF_SPI:
+		break;
+	}
+}
+
+int misc_init_r(void)
+{
+	setup_fdt();
+	setup_boot_mode();
+
+	return 0;
+}
+
+int checkboard(void)
+{
+	puts("BOARD: Thunder Bay\n");
+
+	return 0;
+}
+
+void reset_cpu(ulong addr)
+{
+	psci_system_reset();
+}
+
+int dram_init(void)
+{
+	gd->ram_size = get_effective_memsize();
+
+	return 0;
+}
+
+int dram_init_banksize(void)
+{
+	gd->bd->bi_dram[0].start = CONFIG_SYS_SDRAM_BASE;
+	gd->bd->bi_dram[0].size = gd->ram_size;
+
+	return 0;
+}
+
+#ifdef CONFIG_BOARD_EARLY_INIT_F
+int board_early_init_f(void)
+{
+#ifdef CONFIG_DEBUG_UART
+	/* Enable debug UART */
+	debug_uart_init();
+#endif /* CONFIG_DEBUG_UART */
+
+	return 0;
+}
+#endif /* CONFIG_BOARD_EARLY_INIT_F */
+
+static int thb_tpm_init(void)
+{
+	struct udevice *dev;
+	int rc = 0;
+
+	rc = get_tpm(&dev);
+	if (rc)
+		return rc;
+	if (tpm_init(dev) || tpm2_startup(dev, TPM2_SU_CLEAR)) {
+		printf("thb tpm_init failed\n");
+		return -EINVAL;
+	}
+
+	if (tpm2_self_test(dev, TPMI_YES)) {
+		printf("thb tpm self test failed\n");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+int board_init(void)
+{
+	return 0;
+}
+
+/*
+ * This function is called during U-Boot initialization, after relocation (and
+ * after board_init()).
+ */
+int board_early_init_r(void)
+{
+#if defined(CONFIG_THUNDERBAY_MEM_PROTECT)
+	if  (thb_imr_post_u_boot_reloc())
+		return -1;
+#endif /* CONFIG_THUNDERBAY_MEM_PROTECT */
+
+	return 0;
+}
+
+/**
+ * board_is_secure() - Let us know if we are a secure SKU or not.
+ *
+ * Returns 1 for secure, otherwise 0
+ */
+static int board_is_secure(void)
+{
+        /* TODO: retrieve secure SKU. */
+        return env_get_ulong("SECURE_SKU", 2, 0);
+}
+
+/**
+ * apply_emmc_boot_partition_power_on_wp() - WP the boot partitions.
+ *
+ * Note that this function will hang the system if it fails to
+ * write protect the boot partitions, because it is a requirement
+ * of a secure system.
+ *
+ * Returns 0 for success, otherwise -ve error value
+ */
+static int apply_emmc_boot_partition_power_on_wp(void)
+{
+	struct mmc *mmc = find_mmc_device(0);
+
+	if (!mmc) {
+		printf("Couldn't find eMMC device.\n");
+		return -EIO;
+	}
+#ifdef THB_EMMC_DRIVER_UPGRADE
+	/*
+	 * Configuration is:
+	 * - B_SEC_WP_SEL = 0
+	 * - B_PWR_WP_DIS = 0
+	 * - B_PERM_WP_DIS = 0
+	 * - B_PERM_WP_SEC_SEL = 0
+	 * - B_PERM_WP_EN = 0
+	 * - B_PWR_WP_SEC_SEL = 0
+	 * - B_PWR_WP_EN = 1
+	 *
+	 * i.e. Apply configuration to both boot partitions,
+	 * configuration is: no permanent write protection, only
+	 * power-on write protection.
+	 */
+	ret = mmc_set_boot_wp(mmc, 0, 0, 0, 0, 0, 0, 1);
+	if (ret) {
+		printf("Fatal error: failed to set BOOT_WP configuration.\n");
+		return ret;
+	}
+
+	/* Verify above setup */
+	ret = mmc_get_boot_wp_status(mmc, &boot_wp_status);
+	if (ret) {
+		printf("Fatal error: failed to get BOOT_WP_STATUS.\n");
+		return ret;
+	}
+
+	if ((EXT_CSD_EXTRACT_B_AREA_1_WP(boot_wp_status) !=
+	     EXT_CSD_BOOT_AREA_POWER_ON_PROTECTED) ||
+	    (EXT_CSD_EXTRACT_B_AREA_2_WP(boot_wp_status) !=
+	     EXT_CSD_BOOT_AREA_POWER_ON_PROTECTED)) {
+		printf("Fatal: boot areas were not power-on protected.\n");
+		return -EPERM;
+	}
+#endif
+
+	return 0;
+}
+
+/*
+ * As per Section 10 of TCG PC Client Platform Spec, update the auth
+ * value for Platform hierarchy so that only firmware can use it.
+ */
+static int thb_tpm_change_platform_auth_hierarchy(void)
+{
+       char pwd_buffer[TPM2_DIGEST_LEN];
+       u32 pwd_len = TPM2_DIGEST_LEN;
+       u32 tpm_v2_handle = TPM2_RH_PLATFORM;
+       int rc = 0, i = 0;
+	   struct udevice *dev;
+
+		rc = get_tpm(&dev);
+		if (rc)
+			return rc;
+       /*  random data is needed the password */
+       srand(get_ticks() + rand());
+       for (i = 0; i < TPM2_DIGEST_LEN; i++)
+               pwd_buffer[i] = rand();
+
+       rc = tpm2_change_auth(dev, tpm_v2_handle, (const char *)pwd_buffer,
+                             pwd_len, NULL, 0);
+       if (rc) {
+               printf("%s: tpm2_change_auth failed ret %d\n", __func__, rc);
+               return -EINVAL;
+       }
+
+       memset(pwd_buffer, 0x00, TPM2_DIGEST_LEN);
+
+       return 0;
+}
+
+static int thb_tpm_close(void)
+{
+#ifdef THB_SECURITY_FEATURE
+       if (tpm_deinit()) {
+               printf("deinitialize tpm failed\n");
+               return -EINVAL;
+       }
+#endif
+       return 0;
+}
+
+void board_preboot_os(void)
+{
+	ocs_hash_alg_t hash_alg;
+
+	if (board_is_secure()) {
+		/*
+		 * When the boot interface is eMMC, and we are a secure SKU,
+		 * we must apply power-on write protection to the boot
+		 * partitions.
+		 */
+		if (boot_interface == MA_BOOT_INTF_EMMC) {
+			if (apply_emmc_boot_partition_power_on_wp()) {
+				/*
+				 * TODO: should centralise final state when some
+				 * security issue has occurred, as opposed to
+				 * other boot fails, etc.
+				 */
+				hang();
+			}
+		}
+
+		/* Secure boot == yes, Measure boot == yes
+		 * TPM init here
+		 */
+		if (thb_tpm_init())
+			hang();
+
+		/* Get hash alg from bl ctx */
+		if (measure_boot_bl2(&hash_alg))
+			hang();
+
+		/* Use the same hash alg from kernel and FDT */
+		if (measure_boot_kernel_fdt(hash_alg))
+			hang();
+
+		/* Change TPM Platform Heirachy */
+		if (thb_tpm_change_platform_auth_hierarchy())
+			board_boot_fail(SECURITY_FAIL_TPM_CHANGE_PLAT_HIER);
+
+		if (thb_tpm_close()) {
+			board_boot_fail(SECURITY_FAIL_TPM_DEINIT);
+		}
+	}
+#if defined(CONFIG_THUNDERBAY_MEM_PROTECT)
+	if (thb_imr_preboot_os()) {
+		/* TODO: handle security issue properly. */
+		hang();
+	}
+#endif /* CONFIG_THUNDERBAY_MEM_PROTECT */
+}
+
+void board_bootm_start(void)
+{
+#ifndef CONFIG_PLATFORM_THUNDERBAY
+	/* TODO: IMR is not ready yet. Enable once IMR is ready*/
+#if defined(CONFIG_THUNDERBAY_MEM_PROTECT)
+	if (thb_imr_bootm_start()) {
+		printf("%s: error: IMR setup failed\n", __func__);
+		hang();
+	}
+#endif /* CONFIG_THUNDERBAY_MEM_PROTECT */
+#endif
+}
+
+/* Mapping of TBH Prime Slices and Memory Cfg */
+u8 slice_mem_map[SLICE_INDEX][MEM_INDEX] __attribute__ ((section(".data")));
+
+phys_size_t get_effective_memsize(void)
+{
+	u8 slice_enabled = 4;
+	u64 slice_ddr_size = SZ_4G;
+	u8 slice[4] = {0,0,0,0};
+	u8 ddr_mem[2] = {0,0};
+	u8 thb_full = 0;
+
+        int rc = 0;
+        platform_bl_ctx_t plat_bl_ctx;
+
+	/* Get BL context structure */
+	rc = get_bl_ctx(&plat_bl_ctx);
+
+	if (rc)
+        {
+                panic("Failed to retrieve bl ctx, slice and memory selection failed\n");
+        }
+
+	/* Slice 0 Enable */
+	if(plat_bl_ctx.slice_en[0])
+		slice[0] = 1;
+
+	/* Slice 1 Enable */
+	if(plat_bl_ctx.slice_en[1])
+		slice[1] = 1;
+
+	/* Slice 2 Enable */
+	if(plat_bl_ctx.slice_en[2])
+		slice[2] = 1;
+
+	/* Slice 3 Enable */
+	if(plat_bl_ctx.slice_en[3])
+		slice[3] = 1;
+
+	/* If DDR CFG is 8GB */
+	if(plat_bl_ctx.mem_id)
+		ddr_mem[1] = 1;
+	else
+                ddr_mem[0] = 1;/* If DDR CFG is 4GB */
+
+	thb_full =  (slice[0] & slice[1] & slice[2] & slice[3]);
+
+	/* If configuration is Thunderbay Prime */
+	if(!thb_full)
+	{
+		slice_mem_map[SLICE_0_2][SLICE_4GB] = slice[0] & slice[2] & ddr_mem[0];
+		slice_mem_map[SLICE_0_3][SLICE_4GB] = slice[0] & slice[3] & ddr_mem[0];
+		slice_mem_map[SLICE_1_2][SLICE_4GB] = slice[1] & slice[2] & ddr_mem[0];
+		slice_mem_map[SLICE_1_3][SLICE_4GB] = slice[1] & slice[3] & ddr_mem[0];
+
+		slice_mem_map[SLICE_0_2][SLICE_8GB] = slice[0] & slice[2] & ddr_mem[1];
+		slice_mem_map[SLICE_0_3][SLICE_8GB] = slice[0] & slice[3] & ddr_mem[1];
+		slice_mem_map[SLICE_1_2][SLICE_8GB] = slice[1] & slice[2] & ddr_mem[1];
+		slice_mem_map[SLICE_1_3][SLICE_8GB] = slice[1] & slice[3] & ddr_mem[1];
+	}
+
+	/* If configuration is Thunderbay Full */
+	if(thb_full)
+	{
+		slice_mem_map[SLICE_FULL][SLICE_4GB] = slice[0] & slice[1] &slice[2] & slice[3] & ddr_mem[0];
+		slice_mem_map[SLICE_FULL][SLICE_8GB] = slice[0] & slice[1] &slice[2] & slice[3] & ddr_mem[1];
+	}
+
+	if(plat_bl_ctx.mem_id)
+		slice_ddr_size = SZ_8G;
+
+	/* Total RAM Size */
+	gd->ram_size = ((4 * slice_ddr_size) - SECURE_DDR_SIZE - SHARED_DDR_SIZE);
+
+	/* If Slice 0 is Disable */
+	if(!(plat_bl_ctx.slice_en[0]))
+	{
+		if(slice_enabled >= 1)
+		{
+			gd->ram_size -= slice_ddr_size;
+			slice_enabled-- ;
+		}
+	}
+
+	/* If Slice 1 is Disable */
+	if(!(plat_bl_ctx.slice_en[1]))
+	{
+		if(slice_enabled >= 1)
+		{
+			gd->ram_size -= slice_ddr_size;
+			slice_enabled-- ;
+		}
+	}
+
+	/* If Slice 2 is Disable */
+	if(!(plat_bl_ctx.slice_en[2]))
+	{
+		if(slice_enabled >= 1)
+		{
+			gd->ram_size -= slice_ddr_size;
+			slice_enabled-- ;
+		}
+	}
+
+	/* If Slice 3 is Disable */
+	if(!(plat_bl_ctx.slice_en[3]))
+	{
+		if(slice_enabled >= 1)
+		{
+			gd->ram_size -= slice_ddr_size;
+			slice_enabled-- ;
+		}
+	}
+
+	if(slice_enabled == 0)
+		panic("All Slices are disabled");
+
+	return gd->ram_size;
+}
+
+
+/* This functions configure the DTB blob name based on the THB Prime &
+ * Memory density*/
+void config_dtb_blob(void)
+{
+
+        if(slice_mem_map[SLICE_0_2][SLICE_4GB]){
+                env_set("dtb_conf",THB_PRIME_0_2_4GB_DTB_CONF);
+        }
+        else if(slice_mem_map[SLICE_0_3][SLICE_4GB]){
+                env_set("dtb_conf",THB_PRIME_0_3_4GB_DTB_CONF);
+        }
+        else if(slice_mem_map[SLICE_1_2][SLICE_4GB]){
+                env_set("dtb_conf",THB_PRIME_1_2_4GB_DTB_CONF);
+        }
+        else if(slice_mem_map[SLICE_1_3][SLICE_4GB]){
+                env_set("dtb_conf",THB_PRIME_1_3_4GB_DTB_CONF);
+        }
+        else if(slice_mem_map[SLICE_0_2][SLICE_8GB]){
+                env_set("dtb_conf",THB_PRIME_0_2_8GB_DTB_CONF);
+        }
+        else if(slice_mem_map[SLICE_0_3][SLICE_8GB]){
+                env_set("dtb_conf",THB_PRIME_0_3_8GB_DTB_CONF);
+        }
+        else if(slice_mem_map[SLICE_1_2][SLICE_8GB]){
+                env_set("dtb_conf",THB_PRIME_1_2_8GB_DTB_CONF);
+        }
+        else if(slice_mem_map[SLICE_1_3][SLICE_8GB]){
+                env_set("dtb_conf",THB_PRIME_1_3_8GB_DTB_CONF);
+        }
+                /* If configuration is Thunderbay Full */
+        else if(slice_mem_map[SLICE_FULL][SLICE_4GB]){
+                env_set("dtb_conf",THB_FULL_4GB_DTB_CONF);
+        }
+        else if(slice_mem_map[SLICE_FULL][SLICE_8GB]){
+                env_set("dtb_conf",THB_FULL_8GB_DTB_CONF);
+        }
+        else{
+		pr_info("%s- Error\n",__func__);
+                /* should not reach here*/
+        }
+	return;
+}

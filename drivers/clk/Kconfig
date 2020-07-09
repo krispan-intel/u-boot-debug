@@ -197,4 +197,11 @@ config SANDBOX_CLK_CCF
 	  Enable this option if you want to test the Linux kernel's Common
 	  Clock Framework [CCF] code in U-Boot's Sandbox clock driver.
 
+config CLK_THUNDERBAY_FIXED
+        bool "Enable Thunder Bay fixed clock driver"
+        depends on CLK
+        help
+          Adds Thunder Bay implementation of fixed clock driver. Adds synchronous
+          clock set rate, get rate, enable and disable.
+
 endmenu

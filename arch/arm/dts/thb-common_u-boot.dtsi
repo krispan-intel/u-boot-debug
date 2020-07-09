@@ -470,7 +470,7 @@
 			clock-output-names = "emmc_cardclock";
 			resets = <&rst_pss1 TBH_PSS_EMMC_RST_N>;
 			#clock-cells = <0x0>;
-			supports-cqe;
+			sd-uhs-sdr25;
 			bus-width = <0x4>;
 		};
 

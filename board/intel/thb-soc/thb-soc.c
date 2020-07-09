@@ -696,6 +696,8 @@ static int apply_emmc_boot_partition_power_on_wp(void)
 {
 	struct mmc *mmc = find_mmc_device(0);
 
+	pr_info("eMMC Boot Part WP\n");
+
 	if (!mmc) {
 		printf("Couldn't find eMMC device.\n");
 		return -EIO;

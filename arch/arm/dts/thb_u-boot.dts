@@ -85,18 +85,26 @@
 		shmem = <&general_sec_shmem>;
 	};
 
+        fixed_rate_10mhz: fixed_rate_10mhz {
+                compatible = "thb-fixed-clock";
+                #clock-cells = <0>;
+                clock-frequency = <10000000>;
+                clock-output-names = "dummy_clk";
+                u-boot,dm-pre-reloc;
+        };
+
+        fixed_rate_200mhz: fixed_rate_200mhz {
+                compatible = "thb-fixed-clock";
+                #clock-cells = <0>;
+                clock-frequency = <200000000>;
+                clock-output-names = "dummy_clk";
+                u-boot,dm-pre-reloc;
+        };
+
 	fixed_rate_emu_10mhz: fixed_rate_emu_10mhz {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency = <10000000>;
-		clock-output-names = "dummy_clk";
-		u-boot,dm-pre-reloc;
-	};
-
-	fixed_rate_200mhz: fixed_rate_200mhz {
-		compatible = "fixed-clock";
-		#clock-cells = <0>;
-		clock-frequency = <200000000>;
 		clock-output-names = "dummy_clk";
 		u-boot,dm-pre-reloc;
 	};
@@ -112,7 +120,7 @@
 
 &emmc_phy {
 	status = "okay";
-	clocks = <&fixed_rate_emu_10mhz>;
+	clocks = <&fixed_rate_10mhz>;
 };
 
 &mmc {

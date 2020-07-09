@@ -53,3 +53,83 @@ config PKCS7_VERIFY
 	bool
 
 endif # ASYMMETRIC_KEY_TYPE
+config ECDSA
+	bool "Use ECDSA Library"
+	imply ECDSA_ENGINE_THUNDERBAY
+	select ECDSA_ENGINE_SW if !ECDSA_ENGINE_THUNDERBAY
+	help
+	  ECDSA support. This option enables ECDSA authentication for FIT image
+	  verification in U-Boot. This option can be enabled only on the Thunder
+	  Bay platform (since the code depends on Thunder Bay crypto hardware).
+	  Nevertheless, ECDSA support is added to mkimage regardless of this
+	  option.  The only ECDSA variant currently supported is ECDSA-384.
+
+if ECDSA
+
+config SPL_ECDSA
+	bool "Use ECDSA Library within SPL"
+	help
+	  Enable Elliptic Curve Digital Signature Algorithm (ECDSA) support
+	  also in U-Boot SPL.
+
+config ECDSA_ENGINE_SW
+	bool "Enable driver for software ECDSA engine"
+	depends on DM
+	help
+	  Enable software engine for performing ECDSA crypto operations. Note:
+	  currently, this driver is just a stub.
+
+config ECDSA_ENGINE_THUNDERBAY
+	bool "Enable driver for Thunder Bay ECDSA engine"
+	depends on DM && ARCH_THB
+	help
+	  Enable Thunder Bay ECDSA engine for performing ECDSA crypto operations
+	  in hardware.
+
+endif
+
+config XMSS
+	bool "Use XMSS Library"
+	imply XMSS_ENGINE_THUNDERBAY
+	select XMSS_ENGINE_SW if !XMSS_ENGINE_THUNDERBAY
+	help
+	  XMSS support. This option enables eXtended Merkle Signature Scheme
+	  (XMSS) authentication for FIT image verification in U-Boot. This
+	  option can be enabled only on the Thunder Bay platform (since the code
+	  depends on Thunder Bay crypto hardware). When XMSS is enabled, XMSS
+	  support is also added to 'mkimage'; this requires the use of a
+	  modified version of OpenSSL providing XMSS support.
+
+if XMSS
+
+config SPL_XMSS
+	bool "Use XMSS Library within SPL"
+	help
+	  Enable eXtended Merkle Signature Scheme (XMSS) support also in U-Boot
+	  SPL.
+
+config XMSS_ENGINE_SW
+	bool "Enable driver for software XMSS engine"
+	depends on DM
+	help
+	  Enable software engine for performing XMSS crypto operations. Note:
+	  currently, this driver is just a stub.
+
+config XMSS_ENGINE_THUNDERBAY
+	bool "Enable driver for Thunder Bay XMSS engine"
+	depends on DM && ARCH_THB
+	help
+	  Enable Thunder Bay XMSS hardware engine for performing XMSS crypto
+	  operations in hardware.
+
+# TODO: remove the following config option once XMSS support has been added to
+# upstream OpenSSL.
+config XMSS_OPENSSL_DIR
+	string "The patch to the compiled XMSS OpenSSL library"
+	default "../openssl"
+	help
+	  Specify the path to the directory containing the compiled static
+	  OpenSSL library with XMSS support.  The directory must also contain
+	  the library header files, under the 'include' sub-directory.
+
+endif

@@ -62,6 +62,10 @@ obj-$(CONFIG_$(SPL_)MD5) += md5.o
 obj-$(CONFIG_$(SPL_)RSA) += rsa/
 obj-$(CONFIG_SHA1) += sha1.o
 obj-$(CONFIG_SHA256) += sha256.o
+# Add sha512.o if either CONFIG_SHA384 or CONFIG_SHA512 are set
+ifneq (,$(filter $(CONFIG_SHA384)$(CONFIG_SHA512),y yy))
+obj-y += sha512.o
+endif
 
 # Add sha512.o if either CONFIG_SHA384 or CONFIG_SHA512 are set
 ifneq (,$(filter $(CONFIG_SHA384)$(CONFIG_SHA512),y yy))

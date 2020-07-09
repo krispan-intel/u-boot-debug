@@ -110,6 +110,12 @@ struct fdt_region;
 #define IMAGE_ENABLE_SHA512	0
 #endif
 
+#ifdef CONFIG_FIT_SVN
+#define IMAGE_ENABLE_SVN	1
+#else
+#define IMAGE_ENABLE_SVN	0
+#endif
+
 #endif /* IMAGE_ENABLE_FIT */
 
 #ifdef CONFIG_SYS_BOOT_GET_CMDLINE

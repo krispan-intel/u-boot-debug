@@ -39,6 +39,8 @@
 
 #define SZ_8G                           0x200000000
 
+const char version_string[] = U_BOOT_VERSION_STRING CC_VERSION_STRING;
+
 extern int get_tpm(struct udevice **devp);
 
 phys_size_t get_effective_memsize(void);

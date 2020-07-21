@@ -110,6 +110,7 @@ static const struct fdt_string_prop
 	};
 
 static platform_boot_intf_t boot_interface = MA_BOOT_INTF_EMMC;
+static uint8_t boot_mode __attribute__ ((section(".data")));
 
 static int fdt_create_node_and_populate(void *fdt, int nodeoffset,
 					const char *nodestring, u32 array_size,
@@ -569,6 +570,13 @@ static void setup_boot_mode(void)
 	{
 		boot_interface = bl1_ctx.boot_interface;
 	}
+	if(!boot_mode){
+	/* Open Boot*/
+		env_set("verify", "0");
+		pr_info("Open Boot\n");
+	}else{
+		pr_info("Secure Boot\n");
+	}
 
 	switch (boot_interface) {
 	case MA_BOOT_INTF_EMMC:
@@ -579,8 +587,12 @@ static void setup_boot_mode(void)
 		break;
 	case MA_BOOT_INTF_PCIE:
 		pr_info("Boot Interface :PCIe\n");
+		config_dtb_blob();
+		set_boot_env_config("eMMC", THB_EMMC_BOOTCMD,
+				    THB_EMMC_BOOTARGS);
+		/*TBU SK: for now we use eMMC only for Kernel Boot
 		set_boot_env_config("PCIe", THB_PCIE_BOOTCMD,
-				    THB_PCIE_BOOTARGS);
+				    THB_PCIE_BOOTARGS);*/
 		break;
 	case MA_BOOT_INTF_SPI:
 		break;
@@ -856,11 +868,11 @@ u8 slice_mem_map[SLICE_INDEX][MEM_INDEX] __attribute__ ((section(".data")));
 
 phys_size_t get_effective_memsize(void)
 {
-	u8 slice_enabled = 4;
-	u64 slice_ddr_size = SZ_4G;
 	u8 slice[4] = {0,0,0,0};
 	u8 ddr_mem[2] = {0,0};
 	u8 thb_full = 0;
+	u8 dram_sz = 0;
+	u8 count = 0;
 
         int rc = 0;
         platform_bl_ctx_t plat_bl_ctx;
@@ -872,6 +884,9 @@ phys_size_t get_effective_memsize(void)
         {
                 panic("Failed to retrieve bl ctx, slice and memory selection failed\n");
         }
+
+	boot_mode = plat_bl_ctx.boot_mode; /* Update here to avoid calling bl_ctx multiple times*/
+	dram_sz = plat_bl_ctx.dram_mem;
 
 	/* Slice 0 Enable */
 	if(plat_bl_ctx.slice_en[0])
@@ -918,54 +933,14 @@ phys_size_t get_effective_memsize(void)
 		slice_mem_map[SLICE_FULL][SLICE_8GB] = slice[0] & slice[1] &slice[2] & slice[3] & ddr_mem[1];
 	}
 
-	if(plat_bl_ctx.mem_id)
-		slice_ddr_size = SZ_8G;
+	while(dram_sz != 1)
+	{
+		dram_sz = dram_sz >> 1;
+		count++;
+	}
 
 	/* Total RAM Size */
-	gd->ram_size = ((4 * slice_ddr_size) - SECURE_DDR_SIZE - SHARED_DDR_SIZE);
-
-	/* If Slice 0 is Disable */
-	if(!(plat_bl_ctx.slice_en[0]))
-	{
-		if(slice_enabled >= 1)
-		{
-			gd->ram_size -= slice_ddr_size;
-			slice_enabled-- ;
-		}
-	}
-
-	/* If Slice 1 is Disable */
-	if(!(plat_bl_ctx.slice_en[1]))
-	{
-		if(slice_enabled >= 1)
-		{
-			gd->ram_size -= slice_ddr_size;
-			slice_enabled-- ;
-		}
-	}
-
-	/* If Slice 2 is Disable */
-	if(!(plat_bl_ctx.slice_en[2]))
-	{
-		if(slice_enabled >= 1)
-		{
-			gd->ram_size -= slice_ddr_size;
-			slice_enabled-- ;
-		}
-	}
-
-	/* If Slice 3 is Disable */
-	if(!(plat_bl_ctx.slice_en[3]))
-	{
-		if(slice_enabled >= 1)
-		{
-			gd->ram_size -= slice_ddr_size;
-			slice_enabled-- ;
-		}
-	}
-
-	if(slice_enabled == 0)
-		panic("All Slices are disabled");
+	gd->ram_size = (SZ_1G << count) - SECURE_DDR_SIZE - SHARED_DDR_SIZE;
 
 	return gd->ram_size;
 }

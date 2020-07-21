@@ -176,6 +176,8 @@ typedef struct {
         const uint32_t enc_fwu_key_iv[AES_IV_U32_SIZE]; /* FWU key IV pdat item. */
 	const uint8_t slice_en[4]; /*Slice info pdat item. */
         const uint8_t mem_id; /* Memory Config info pdat item*/
+	const uint8_t dram_mem; /* Total dram memory */
+	const uint8_t boot_mode; /* Boot mode */
 } platform_bl_ctx_t;
 
 #endif /* __PLATFORM_PRIVATE_H__ */

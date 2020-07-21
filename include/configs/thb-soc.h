@@ -85,10 +85,12 @@
  * TODO: add root=/dev/mmcblk0pX parameter to bootargs
  */
 #define THB_EMMC_BOOTCMD                                                       \
-        "mmc dev 0;echo loading Kernel...; load mmc 0:4 ${fit_addr} Image;bootm ${fit_addr}#${dtb_conf}\0"       \
-        "load mmc 0:2 ${initrd_addr} initramfs.uboot;\0"                       \
-        "booti ${kernel_addr} ${initrd_addr} ${fdt_addr}"
-#define THB_EMMC_BOOTARGS "console=ttyS0,115200 root=/dev/mmcblk0p5 rw rootwait"
+	"if test -e mmc 0:4 auto.scr; then echo found bootscript;load mmc 0:4 0x101C200000 auto.scr;source 0x101C200000; \
+	 echo script loading failed: continuing...; fi;"\
+        "mmc dev 0;echo loading Kernel...;echo load mmc 0:4 '$fit_addr' Image; load mmc 0:4 ${fit_addr} Image; \
+		echo bootm '${fit_addr}'#${dtb_conf};bootm ${fit_addr}#${dtb_conf}\0"
+
+#define THB_EMMC_BOOTARGS "root=/dev/mmcblk0p5 rootwait rw mender.data=PARTLABEL=data console=ttyS0,115200"
 /*
  * PCIe Configuration:
  *  Kernel image and ramfs will be loaded from host memory.

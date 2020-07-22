@@ -502,6 +502,19 @@
 			status = "disabled";
 		};
 
+		/* EP node */
+		pcie_ep0: pcie_ep@82000000 {
+			compatible = "intel,thunderbay-pcie-ep", "snps,dw-pcie-ep";
+			reg = <0x0 0x82000000 0x0 0x400000>,
+				<0x20 0x00000000 0x0 0x1000000>,
+				<0x0 0x828b0000 0x0 0x800000>;
+			reg-names = "dbi", "addr_space", "apb";
+			num-lanes = <2>;
+			num-ib-windows = <2>;
+			num-ob-windows = <2>;
+			status = "disabled";
+		};
+
 		ecc0: ecc@88821000 {
                         compatible = "intel,thunderbay-ocs-ecc";
                         reg = <0x0 0x88821000 0x0 0x1000>;

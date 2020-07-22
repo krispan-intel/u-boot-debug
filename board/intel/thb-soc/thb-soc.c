@@ -12,6 +12,7 @@
 #include <debug_uart.h>
 #endif /* CONFIG_DEBUG_UART */
 #include <asm/arch/boot/platform_private.h>
+#include <asm/arch/thb_shared_mem.h>
 #include <asm/arch-thb/thb-boot-code.h>
 #include <asm/arch/sip_svc.h>
 #include <asm/io.h>
@@ -204,7 +205,7 @@ int board_boot_fail(unsigned int code)
  * Retrieve an area that can be shared with the secure world for
  * communication.
  */
-static void __iomem *get_secure_shmem_ptr(size_t min_size)
+void __iomem *get_secure_shmem_ptr(size_t min_size)
 {
 	int offset = 0;
 	fdt_addr_t shmem_addr;
@@ -503,7 +504,7 @@ static int measure_boot_bl2(ocs_hash_alg_t *hash_alg)
  *
  * Return: 0 on success, negative error code otherwise.
  */
-static int get_bl1_ctx(platform_bl1_ctx_t *bl1_ctx)
+int get_bl1_ctx(platform_bl1_ctx_t *bl1_ctx)
 {
 	platform_bl1_ctx_t *shmem_bl1_ctx = NULL;
 	int rc = 0;

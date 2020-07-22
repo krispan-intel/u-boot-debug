@@ -129,6 +129,10 @@
 	assigned-clocks = <&fixed_rate_200mhz>;
 };
 
+&pcie_ep0{
+	status = "okay";
+};
+
 &ecdsa_engine {
 	/* Use general secure-world shared memory. */
 	shmem = <&general_sec_shmem>;

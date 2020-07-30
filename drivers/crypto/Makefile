@@ -8,3 +8,4 @@ obj-y += rsa_mod_exp/
 obj-y += fsl/
 obj-y += ecdsa-engine/
 obj-y += xmss-engine/
+obj-y += ocs_hash/

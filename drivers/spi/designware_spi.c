@@ -30,119 +30,136 @@
 #include <linux/iopoll.h>
 #include <linux/sizes.h>
 
+DECLARE_GLOBAL_DATA_PTR;
+
 /* Register offsets */
-#define DW_SPI_CTRLR0			0x00
-#define DW_SPI_CTRLR1			0x04
-#define DW_SPI_SSIENR			0x08
-#define DW_SPI_MWCR			0x0c
-#define DW_SPI_SER			0x10
-#define DW_SPI_BAUDR			0x14
-#define DW_SPI_TXFTLR			0x18
-#define DW_SPI_RXFTLR			0x1c
-#define DW_SPI_TXFLR			0x20
-#define DW_SPI_RXFLR			0x24
-#define DW_SPI_SR			0x28
-#define DW_SPI_IMR			0x2c
-#define DW_SPI_ISR			0x30
-#define DW_SPI_RISR			0x34
-#define DW_SPI_TXOICR			0x38
-#define DW_SPI_RXOICR			0x3c
-#define DW_SPI_RXUICR			0x40
-#define DW_SPI_MSTICR			0x44
-#define DW_SPI_ICR			0x48
-#define DW_SPI_DMACR			0x4c
-#define DW_SPI_DMATDLR			0x50
-#define DW_SPI_DMARDLR			0x54
-#define DW_SPI_IDR			0x58
-#define DW_SPI_VERSION			0x5c
-#define DW_SPI_DR			0x60
+#define DW_SPI_CTRLR0                    0x00
+#define DW_SPI_CTRLR1                    0x04
+#define DW_SPI_SSIENR                    0x08
+#define DW_SPI_MWCR                      0x0c
+#define DW_SPI_SER                       0x10
+#define DW_SPI_BAUDR                     0x14
+#define DW_SPI_TXFTLR                    0x18
+#define DW_SPI_RXFTLR                    0x1c
+#define DW_SPI_TXFLR                     0x20
+#define DW_SPI_RXFLR                     0x24
+#define DW_SPI_SR                        0x28
+#define DW_SPI_IMR                       0x2c
+#define DW_SPI_ISR                       0x30
+#define DW_SPI_RISR                      0x34
+#define DW_SPI_TXOICR                    0x38
+#define DW_SPI_RXOICR                    0x3c
+#define DW_SPI_RXUICR                    0x40
+#define DW_SPI_MSTICR                    0x44
+#define DW_SPI_ICR                       0x48
+#define DW_SPI_DMACR                     0x4c
+#define DW_SPI_DMATDLR                   0x50
+#define DW_SPI_DMARDLR                   0x54
+#define DW_SPI_IDR                       0x58
+#define DW_SPI_VERSION                   0x5c
+#define DW_SPI_DR                        0x60
 
 /* Bit fields in CTRLR0 */
 /*
  * Only present when SSI_MAX_XFER_SIZE=16. This is the default, and the only
  * option before version 3.23a.
  */
-#define CTRLR0_DFS_MASK			GENMASK(3, 0)
+#define CTRLR0_DFS_MASK                  GENMASK(3, 0)
 
-#define CTRLR0_FRF_MASK			GENMASK(5, 4)
-#define CTRLR0_FRF_SPI			0x0
-#define CTRLR0_FRF_SSP			0x1
-#define CTRLR0_FRF_MICROWIRE		0x2
-#define CTRLR0_FRF_RESV			0x3
+#define CTRLR0_FRF_MASK                  GENMASK(5, 4)
+#define CTRLR0_FRF_SPI                   0x0
+#define CTRLR0_FRF_SSP                   0x1
+#define CTRLR0_FRF_MICROWIRE             0x2
+#define CTRLR0_FRF_RESV                  0x3
 
-#define CTRLR0_MODE_MASK		GENMASK(7, 6)
-#define CTRLR0_MODE_SCPH		0x1
-#define CTRLR0_MODE_SCPOL		0x2
+#define CTRLR0_MODE_MASK                 GENMASK(7, 6)
+#define CTRLR0_MODE_SCPH                 0x1
+#define CTRLR0_MODE_SCPOL                0x2
 
-#define CTRLR0_TMOD_MASK		GENMASK(9, 8)
-#define	CTRLR0_TMOD_TR			0x0		/* xmit & recv */
-#define CTRLR0_TMOD_TO			0x1		/* xmit only */
-#define CTRLR0_TMOD_RO			0x2		/* recv only */
-#define CTRLR0_TMOD_EPROMREAD		0x3		/* eeprom read mode */
+#define CTRLR0_TMOD_MASK                 GENMASK(9, 8)
+#define	CTRLR0_TMOD_TR                   0x0		/* xmit & recv */
+#define CTRLR0_TMOD_TO                   0x1		/* xmit only */
+#define CTRLR0_TMOD_RO                   0x2		/* recv only */
+#define CTRLR0_TMOD_EPROMREAD            0x3		/* eeprom read mode */
 
-#define CTRLR0_SLVOE_OFFSET		10
-#define CTRLR0_SRL_OFFSET		11
-#define CTRLR0_CFS_MASK			GENMASK(15, 12)
+#define CTRLR0_SLVOE_OFFSET              10
+#define CTRLR0_SRL_OFFSET                11
+#define CTRLR0_CFS_MASK                  GENMASK(15, 12)
 
 /* Only present when SSI_MAX_XFER_SIZE=32 */
-#define CTRLR0_DFS_32_MASK		GENMASK(20, 16)
+#define CTRLR0_DFS_32_MASK              GENMASK(20, 16)
 
 /* The next field is only present on versions after 4.00a */
-#define CTRLR0_SPI_FRF_MASK		GENMASK(22, 21)
-#define CTRLR0_SPI_FRF_BYTE		0x0
-#define	CTRLR0_SPI_FRF_DUAL		0x1
-#define	CTRLR0_SPI_FRF_QUAD		0x2
+#define CTRLR0_SPI_FRF_MASK             GENMASK(22, 21)
+#define CTRLR0_SPI_FRF_BYTE             0x0
+#define CTRLR0_SPI_FRF_DUAL             0x1
+#define CTRLR0_SPI_FRF_QUAD             0x2
 
 /* Bit fields in CTRLR0 based on DWC_ssi_databook.pdf v1.01a */
-#define DWC_SSI_CTRLR0_DFS_MASK		GENMASK(4, 0)
-#define DWC_SSI_CTRLR0_FRF_MASK		GENMASK(7, 6)
-#define DWC_SSI_CTRLR0_MODE_MASK	GENMASK(9, 8)
-#define DWC_SSI_CTRLR0_TMOD_MASK	GENMASK(11, 10)
-#define DWC_SSI_CTRLR0_SRL_OFFSET	13
-#define DWC_SSI_CTRLR0_SPI_FRF_MASK	GENMASK(23, 22)
+#define DWC_SSI_CTRLR0_DFS_MASK         GENMASK(4, 0)
+#define DWC_SSI_CTRLR0_FRF_MASK         GENMASK(7, 6)
+#define DWC_SSI_CTRLR0_MODE_MASK        GENMASK(9, 8)
+#define DWC_SSI_CTRLR0_TMOD_MASK        GENMASK(11, 10)
+#define DWC_SSI_CTRLR0_SRL_OFFSET       13
+#define DWC_SSI_CTRLR0_SPI_FRF_MASK	    GENMASK(23, 22)
 
 /* Bit fields in SR, 7 bits */
-#define SR_MASK				GENMASK(6, 0)	/* cover 7 bits */
-#define SR_BUSY				BIT(0)
-#define SR_TF_NOT_FULL			BIT(1)
-#define SR_TF_EMPT			BIT(2)
-#define SR_RF_NOT_EMPT			BIT(3)
-#define SR_RF_FULL			BIT(4)
-#define SR_TX_ERR			BIT(5)
-#define SR_DCOL				BIT(6)
+#define SR_MASK                         GENMASK(6, 0)	/* cover 7 bits */
+#define SR_BUSY                         BIT(0)
+#define SR_TF_NOT_FULL                  BIT(1)
+#define SR_TF_EMPT                      BIT(2)
+#define SR_RF_NOT_EMPT                  BIT(3)
+#define SR_RF_FULL                      BIT(4)
+#define SR_TX_ERR                       BIT(5)
+#define SR_DCOL                         BIT(6)
 
-#define RX_TIMEOUT			1000		/* timeout in ms */
+#define SSI_INST1_RST_CLR               0x80442008
+#define SSI_INST1_RST_SET               0x80442004
+#define GPIO_APB_REGS_REGS_gpio_ctrl_reg_23 0x8045005C
+#define ssic_address_block_CTRLR0       0x80530000
+#define RX_TIMEOUT                      1000        /* timeout in ms */
+
+enum dw_ssi_core_type {
+	DWC_APB_SSI,    /* for DesignWare core DW_apb_ssi */
+	DWC_AHB_SSI,    /* for DesignWare core DW_AHB_ssi */
+};
 
 struct dw_spi_plat {
-	s32 frequency;		/* Default clock frequency, -1 for none */
+	s32 frequency;          /* Default clock frequency, -1 for none */
 	void __iomem *regs;
 };
 
 struct dw_spi_priv {
 	struct clk clk;
 	struct reset_ctl_bulk resets;
-	struct gpio_desc cs_gpio;	/* External chip-select gpio */
+	/* DesignWare Core SSI product */
+	enum dw_ssi_core_type ssi_core_type;
+	struct gpio_desc cs_gpio;    /* External chip-select gpio */
 
 	u32 (*update_cr0)(struct dw_spi_priv *priv);
 
 	void __iomem *regs;
 	unsigned long bus_clk_rate;
-	unsigned int freq;		/* Default frequency */
+	unsigned int freq;          /* Default frequency */
 	unsigned int mode;
 
 	const void *tx;
 	const void *tx_end;
 	void *rx;
 	void *rx_end;
-	u32 fifo_len;			/* depth of the FIFO buffer */
-	u32 max_xfer;			/* Maximum transfer size (in bits) */
+	u32 fifo_len;          /* depth of the FIFO buffer */
+	u32 max_xfer;          /* Maximum transfer size (in bits) */
 
 	int bits_per_word;
 	int len;
-	u8 cs;				/* chip select pin */
-	u8 tmode;			/* TR/TO/RO/EEPROM */
-	u8 type;			/* SPI/SSP/MicroWire */
+	u8 cs;             /* chip select pin */
+	u8 tmode;          /* TR/TO/RO/EEPROM */
+	u8 type;           /* SPI/SSP/MicroWire */
 };
+
+	struct reset_ctl_bulk resets;
+	/* DesignWare Core SSI product */
+	enum dw_ssi_core_type ssi_core_type;
 
 static inline u32 dw_read(struct dw_spi_priv *priv, u32 offset)
 {
@@ -205,13 +222,16 @@ static int request_gpio_cs(struct udevice *bus)
 {
 #if CONFIG_IS_ENABLED(DM_GPIO) && !defined(CONFIG_SPL_BUILD)
 	struct dw_spi_priv *priv = dev_get_priv(bus);
+	const void *blob = gd->fdt_blob;
+	int node = dev_of_offset(bus);
 	int ret;
 
 	/* External chip select gpio line is optional */
 	ret = gpio_request_by_name(bus, "cs-gpios", 0, &priv->cs_gpio,
 				   GPIOD_IS_OUT | GPIOD_IS_OUT_ACTIVE);
-	if (ret == -ENOENT)
+	if (ret == -ENOENT) {
 		return 0;
+	}
 
 	if (ret < 0) {
 		dev_err(bus, "Couldn't request gpio! (error %d)\n", ret);
@@ -231,14 +251,16 @@ static int request_gpio_cs(struct udevice *bus)
 static int dw_spi_of_to_plat(struct udevice *bus)
 {
 	struct dw_spi_plat *plat = dev_get_plat(bus);
+	const void *blob = gd->fdt_blob;
+	int node = dev_of_offset(bus);
 
 	plat->regs = dev_read_addr_ptr(bus);
 	if (!plat->regs)
 		return -EINVAL;
 
 	/* Use 500KHz as a suitable default */
-	plat->frequency = dev_read_u32_default(bus, "spi-max-frequency",
-					       500000);
+	plat->frequency = fdtdec_get_int(blob, node, "spi-max-frequency",
+					 500000);
 
 	if (dev_read_bool(bus, "spi-slave"))
 		return -EINVAL;
@@ -251,6 +273,15 @@ static int dw_spi_of_to_plat(struct udevice *bus)
 /* Restart the controller, disable all interrupts, clean rx fifo */
 static void spi_hw_init(struct udevice *bus, struct dw_spi_priv *priv)
 {
+	debug("Before reset reg0=0x%X\n", __raw_readl(0x80530000));
+	__raw_writel(1, 0x80442008);
+	mdelay(2);
+	__raw_writel(1, 0x80442004);
+	mdelay(2);
+	debug("After reset reg0=0x%X\n", __raw_readl(0x80530000));
+
+	__raw_writel(0x001f0d00, 0x8045005C); // cs through gpio
+
 	dw_write(priv, DW_SPI_SSIENR, 0);
 	dw_write(priv, DW_SPI_IMR, 0xff);
 	dw_write(priv, DW_SPI_SSIENR, 1);
@@ -264,8 +295,9 @@ static void spi_hw_init(struct udevice *bus, struct dw_spi_priv *priv)
 
 		for (fifo = 1; fifo < 256; fifo++) {
 			dw_write(priv, DW_SPI_TXFTLR, fifo);
-			if (fifo != dw_read(priv, DW_SPI_TXFTLR))
+			if (fifo != dw_read(priv, DW_SPI_TXFTLR)) {
 				break;
+			}
 		}
 
 		priv->fifo_len = (fifo == 1) ? 0 : fifo;
@@ -285,16 +317,19 @@ __weak int dw_spi_get_clk(struct udevice *bus, ulong *rate)
 	int ret;
 
 	ret = clk_get_by_index(bus, 0, &priv->clk);
-	if (ret)
+	if (ret) {
 		return ret;
+	}
 
 	ret = clk_enable(&priv->clk);
-	if (ret && ret != -ENOSYS && ret != -ENOTSUPP)
+	if (ret && ret != -ENOSYS && ret != -ENOTSUPP) {
 		return ret;
+	}
 
 	*rate = clk_get_rate(&priv->clk);
-	if (!*rate)
+	if (!*rate) {
 		goto err_rate;
+	}
 
 	dev_dbg(bus, "Got clock via device tree: %lu Hz\n", *rate);
 
@@ -318,8 +353,9 @@ static int dw_spi_reset(struct udevice *bus)
 		 * Return 0 if error due to !CONFIG_DM_RESET and reset
 		 * DT property is not present.
 		 */
-		if (ret == -ENOENT || ret == -ENOTSUPP)
+		if (ret == -ENOENT || ret == -ENOTSUPP) {
 			return 0;
+		}
 
 		dev_warn(bus, "Couldn't find/assert reset device (error %d)\n",
 			 ret);
@@ -347,22 +383,33 @@ static int dw_spi_probe(struct udevice *bus)
 	int ret;
 	u32 version;
 
+	if (device_is_compatible(bus, "snps,dw-ahb-ssi")) {
+		debug("%s: DWC_AHB_SSI\n", __func__);
+		priv->ssi_core_type = DWC_AHB_SSI;
+	} else {
+		priv->ssi_core_type = DWC_APB_SSI;
+	}
+
 	priv->regs = plat->regs;
 	priv->freq = plat->frequency;
 
 	ret = dw_spi_get_clk(bus, &priv->bus_clk_rate);
-	if (ret)
+	if (ret) {
 		return ret;
+	}
 
 	ret = dw_spi_reset(bus);
-	if (ret)
+	if (ret) {
 		return ret;
+	}
 
-	if (!init)
+	if (!init) {
 		return -EINVAL;
+	}
 	ret = init(bus, priv);
-	if (ret)
+	if (ret) {
 		return ret;
+	}
 
 	version = dw_read(priv, DW_SPI_VERSION);
 	dev_dbg(bus, "ssi_version_id=%c.%c%c%c ssi_max_xfer_size=%u\n",
@@ -397,7 +444,7 @@ static inline u32 tx_max(struct dw_spi_priv *priv)
 	 * view is taken.
 	 */
 	rxtx_gap = ((priv->rx_end - priv->rx) - (priv->tx_end - priv->tx)) /
-		(priv->bits_per_word >> 3);
+		   (priv->bits_per_word >> 3);
 
 	return min3(tx_left, tx_room, (u32)(priv->fifo_len - rxtx_gap));
 }
@@ -418,10 +465,11 @@ static void dw_writer(struct dw_spi_priv *priv)
 	while (max--) {
 		/* Set the tx word if the transfer's original "tx" is not null */
 		if (priv->tx_end - priv->len) {
-			if (priv->bits_per_word == 8)
+			if (priv->bits_per_word == 8) {
 				txw = *(u8 *)(priv->tx);
-			else
+			} else {
 				txw = *(u16 *)(priv->tx);
+			}
 		}
 		dw_write(priv, DW_SPI_DR, txw);
 		log_content("tx=0x%02x\n", txw);
@@ -440,10 +488,11 @@ static void dw_reader(struct dw_spi_priv *priv)
 
 		/* Care about rx if the transfer's original "rx" is not null */
 		if (priv->rx_end - priv->len) {
-			if (priv->bits_per_word == 8)
+			if (priv->bits_per_word == 8) {
 				*(u8 *)(priv->rx) = rxw;
-			else
+			} else {
 				*(u16 *)(priv->rx) = rxw;
+			}
 		}
 		priv->rx += priv->bits_per_word >> 3;
 	}
@@ -459,22 +508,29 @@ static int poll_transfer(struct dw_spi_priv *priv)
 	return 0;
 }
 
-/*
- * We define external_cs_manage function as 'weak' as some targets
- * (like MSCC Ocelot) don't control the external CS pin using a GPIO
- * controller. These SoCs use specific registers to control by
- * software the SPI pins (and especially the CS).
- */
-__weak void external_cs_manage(struct udevice *dev, bool on)
+static void external_cs_manage(struct udevice *dev, bool on)
 {
+	u32 val;
+
 #if CONFIG_IS_ENABLED(DM_GPIO) && !defined(CONFIG_SPL_BUILD)
 	struct dw_spi_priv *priv = dev_get_priv(dev->parent);
 
-	if (!dm_gpio_is_valid(&priv->cs_gpio))
+	if (!dm_gpio_is_valid(&priv->cs_gpio)) {
 		return;
+	}
 
 	dm_gpio_set_value(&priv->cs_gpio, on ? 1 : 0);
 #endif
+
+	val = __raw_readl(0x8045005C);
+	if (on) {
+		debug("gpio set to 1\n");
+		val = val | (1 << 23);
+	} else {
+		debug("gpio set to 0\n");
+		val = val & ~(1 << 23);
+	}
+	__raw_writel(val, 0x8045005C);  // cs gpio
 }
 
 static int dw_spi_xfer(struct udevice *dev, unsigned int bitlen,
@@ -496,20 +552,21 @@ static int dw_spi_xfer(struct udevice *dev, unsigned int bitlen,
 	}
 
 	/* Start the transaction if necessary. */
-	if (flags & SPI_XFER_BEGIN)
+	if (flags & SPI_XFER_BEGIN) {
 		external_cs_manage(dev, false);
+	}
 
-	if (rx && tx)
+	if (rx && tx) {
 		priv->tmode = CTRLR0_TMOD_TR;
-	else if (rx)
+	} else if (rx) {
 		priv->tmode = CTRLR0_TMOD_RO;
-	else
+	} else {
 		/*
 		 * In transmit only mode (CTRL0_TMOD_TO) input FIFO never gets
 		 * any data which breaks our logic in poll_transfer() above.
 		 */
 		priv->tmode = CTRLR0_TMOD_TR;
-
+	}
 	cr0 = priv->update_cr0(priv);
 
 	priv->len = bitlen >> 3;
@@ -525,16 +582,18 @@ static int dw_spi_xfer(struct udevice *dev, unsigned int bitlen,
 	dev_dbg(dev, "cr0=%08x rx=%p tx=%p len=%d [bytes]\n", cr0, rx, tx,
 		priv->len);
 	/* Reprogram cr0 only if changed */
-	if (dw_read(priv, DW_SPI_CTRLR0) != cr0)
+	if (dw_read(priv, DW_SPI_CTRLR0) != cr0) {
 		dw_write(priv, DW_SPI_CTRLR0, cr0);
+	}
 
 	/*
 	 * Configure the desired SS (slave select 0...3) in the controller
 	 * The DW SPI controller will activate and deactivate this CS
 	 * automatically. So no cs_activate() etc is needed in this driver.
 	 */
-	cs = spi_chip_select(dev);
-	dw_write(priv, DW_SPI_SER, 1 << cs);
+	//cs = spi_chip_select(dev);
+	//dw_write(priv, DW_SPI_SER, 1 << cs);
+	cs = 0;
 
 	/* Enable controller after writing control registers */
 	dw_write(priv, DW_SPI_SSIENR, 1);
@@ -556,8 +615,9 @@ static int dw_spi_xfer(struct udevice *dev, unsigned int bitlen,
 	}
 
 	/* Stop the transaction if necessary */
-	if (flags & SPI_XFER_END)
+	if (flags & SPI_XFER_END) {
 		external_cs_manage(dev, true);
+	}
 
 	return ret;
 }
@@ -669,8 +729,9 @@ static int dw_spi_set_speed(struct udevice *bus, uint speed)
 	struct dw_spi_priv *priv = dev_get_priv(bus);
 	u16 clk_div;
 
-	if (speed > plat->frequency)
+	if (speed > plat->frequency) {
 		speed = plat->frequency;
+	}
 
 	/* Disable controller before writing control registers */
 	dw_write(priv, DW_SPI_SSIENR, 0);
@@ -678,6 +739,7 @@ static int dw_spi_set_speed(struct udevice *bus, uint speed)
 	/* clk_div doesn't support odd number */
 	clk_div = priv->bus_clk_rate / speed;
 	clk_div = (clk_div + 1) & 0xfffe;
+	//clk_div = 10;
 	dw_write(priv, DW_SPI_BAUDR, clk_div);
 
 	/* Enable controller after writing control registers */
@@ -707,29 +769,14 @@ static int dw_spi_set_mode(struct udevice *bus, uint mode)
 static int dw_spi_remove(struct udevice *bus)
 {
 	struct dw_spi_priv *priv = dev_get_priv(bus);
-	int ret;
-
-	ret = reset_release_bulk(&priv->resets);
-	if (ret)
-		return ret;
-
-#if CONFIG_IS_ENABLED(CLK)
-	ret = clk_disable(&priv->clk);
-	if (ret)
-		return ret;
-
-	ret = clk_free(&priv->clk);
-	if (ret)
-		return ret;
-#endif
-	return 0;
+	return reset_release_bulk(&priv->resets);
 }
 
 static const struct dm_spi_ops dw_spi_ops = {
-	.xfer		= dw_spi_xfer,
-	.mem_ops	= &dw_spi_mem_ops,
-	.set_speed	= dw_spi_set_speed,
-	.set_mode	= dw_spi_set_mode,
+	.xfer = dw_spi_xfer,
+	.mem_ops = &dw_spi_mem_ops,
+	.set_speed = dw_spi_set_speed,
+	.set_mode = dw_spi_set_mode,
 	/*
 	 * cs_info is not needed, since we require all chip selects to be
 	 * in the device tree explicitly
@@ -775,8 +822,8 @@ U_BOOT_DRIVER(dw_spi) = {
 	.of_match = dw_spi_ids,
 	.ops = &dw_spi_ops,
 	.of_to_plat = dw_spi_of_to_plat,
-	.plat_auto	= sizeof(struct dw_spi_plat),
-	.priv_auto	= sizeof(struct dw_spi_priv),
+	.plat_auto = sizeof(struct dw_spi_plat),
+	.priv_auto = sizeof(struct dw_spi_priv),
 	.probe = dw_spi_probe,
 	.remove = dw_spi_remove,
 };

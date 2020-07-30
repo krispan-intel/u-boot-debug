@@ -502,6 +502,27 @@
 			status = "disabled";
 		};
 
+		spi0: spi@80520000 {
+			compatible = "snps,dw-ahb-ssi";
+			reg = <0x0 0x80520000 0x0 0x100>;
+			interrupts = <GIC_SPI 727 IRQ_TYPE_LEVEL_HIGH>;
+			resets = <&rst_pss2 TBH_PSS_SSI_INST_0_RST_N>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+		};
+
+		spi1: spi@80530000 {
+			compatible = "snps,dw-ahb-ssi";
+			reg = <0x0 0x80530000 0x0 0x100>;
+			clocks = <&fixed_rate_emu_10mhz>;
+			interrupts = <GIC_SPI 726 IRQ_TYPE_LEVEL_HIGH>;
+			resets = <&rst_pss2 TBH_PSS_SSI_INST_1_RST_N>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+		};
+
 		/* EP node */
 		pcie_ep0: pcie_ep@82000000 {
 			compatible = "intel,thunderbay-pcie-ep", "snps,dw-pcie-ep";

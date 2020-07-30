@@ -22,6 +22,9 @@
 	aliases {
 		serial0 = &uart0;
 		serial1 = &uart1;
+		spi0 = &spi0;
+		spi1 = &spi1;
+		gpio0 = &gpio0;
 	};
 
 	aliases {
@@ -71,9 +74,18 @@
 			no-map;
 		};
 
-		/* Allocate the rest of shared memory for general use. */
+		/* Allocate the rest of shared memory for general use.
+		 * VPU x509 certificate area will occupy/allocated
+		 * from the below region by the IPC driver. So, optee
+		 * needs to know the region for the VPU authentication
+		 * service TA. https://hsdes.intel.com/resource/16011061170
+		 */
 		general_sec_shmem: general_sec_shmem@200000 {
 			reg = <0x0 0x200000 0x0 0x600000>;
+		};
+
+		optee_tee_shmem: optee_tee_shmem@800000 {
+			reg = <0x0 0x800000 0x0 0x2000000>;
 		};
 	};
 
@@ -142,3 +154,42 @@
 	/* Use general secure-world shared memory. */
 	shmem = <&general_sec_shmem>;
 };
+
+&gpio0 {
+	status = "okay";
+};
+
+&spi1 {
+	status = "okay";
+        clocks = <&fixed_rate_emu_10mhz>;
+	/* The dTPM will be reset upon platform reset,
+	 * without additional individual SPI reset control on THB CRB and VV.
+	 * The CS for VV is enabled in drivers/spi/designware_spi.c.
+	 * May need to revisit to keep this in DTS for ease of control. CRB doesn't CS.
+	 */
+	/*cs-gpio = <&gpio0 45 0>;*/ /* This will be added post GPIO changes */
+
+	tpm_tis_spi: slb9670@0 {
+		compatible = "tis,tpm2-spi", "infineon,slb9670";
+		spi-max-frequency = <22500000>;
+		reg = <0x1>;
+		/* U-Boot will enable fwTPM or dTPM at run-time */
+		/*gpio-reset = <&gpio0 49 0>;*/
+		status = "okay";
+	};
+};
+
+&spi0 {
+	status = "okay";
+	clocks = <&fixed_rate_emu_10mhz>;
+	/*cs-gpio = <&gpio0 19 0>;*/ /* This will be added post GPIO changes */
+
+	flash: mx25u6435f {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "spi-flash";
+		spi-max-frequency = <1000000>;
+		reg = <0x1>;
+	};
+};
+

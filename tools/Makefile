@@ -15,6 +15,19 @@ CONFIG_SHA1_CHECK_UB_IMG = y
 CONFIG_ARCH_SUNXI = y
 endif
 
+ifneq (${CONFIG_XMSS},)
+# Remove double quotes (if present)
+CONFIG_XMSS_OPENSSL_DIR := $(patsubst "%",%,$(CONFIG_XMSS_OPENSSL_DIR))
+# Turn CONFIG_XMSS_OPENSSL_DIR into an absolute path (if it's not already)
+CONFIG_XMSS_OPENSSL_DIR := $(abspath $(CONFIG_XMSS_OPENSSL_DIR))
+# Disable XMSS support if OpenSSL with XMSS is not available
+ifeq ($(wildcard ${CONFIG_XMSS_OPENSSL_DIR}/libcrypto-with-xmss.*),)
+$(warning "No OpenSSL with XMSS found at ${CONFIG_XMSS_OPENSSL_DIR}; disabling XMSS support in mkimage.")
+undefine CONFIG_XMSS
+endif
+endif
+
+subdir-$(HOST_TOOLS_ALL) += easylogo
 subdir-$(HOST_TOOLS_ALL) += gdb
 
 # Merge all the different vars for envcrc into one
@@ -57,7 +70,6 @@ hostprogs-$(CONFIG_FIT_SIGNATURE) += fit_info fit_check_sign
 
 hostprogs-$(CONFIG_CMD_BOOTEFI_SELFTEST) += file2include
 
-FIT_OBJS-$(CONFIG_FIT) := fit_common.o fit_image.o image-host.o common/image-fit.o
 FIT_SIG_OBJS-$(CONFIG_FIT_SIGNATURE) := common/image-sig.o common/image-fit-sig.o
 FIT_CIPHER_OBJS-$(CONFIG_FIT_CIPHER) := common/image-cipher.o
 
@@ -73,12 +85,22 @@ RSA_OBJS-$(CONFIG_FIT_SIGNATURE) := $(addprefix lib/rsa/, \
 AES_OBJS-$(CONFIG_FIT_CIPHER) := $(addprefix lib/aes/, \
 					aes-encrypt.o aes-decrypt.o)
 
+CRYPTO_COMMON_OBJS-$(CONFIG_FIT_SIGNATURE) := $(addprefix lib/crypto/, \
+						crypto-host.o crypto-common.o)
+
+ECDSA_OBJS-$(CONFIG_FIT_SIGNATURE) := $(addprefix lib/crypto/, \
+					ecdsa-sign.o ecdsa-verify.o)
+
+# Note: no need to also check for CONFIG_FIT_SIGNATURE as that's implied by
+# CONFIG_XMSS.
+XMSS_OBJS-$(CONFIG_XMSS) := $(addprefix lib/crypto/, \
+			      xmss-sign.o xmss-verify.o)
+
 ROCKCHIP_OBS = lib/rc4.o rkcommon.o rkimage.o rksd.o rkspi.o
 
 # common objs for dumpimage and mkimage
 dumpimage-mkimage-objs := aisimage.o \
 			atmelimage.o \
-			$(FIT_OBJS-y) \
 			$(FIT_SIG_OBJS-y) \
 			$(FIT_CIPHER_OBJS-y) \
 			common/fdt_region.o \
@@ -87,6 +109,10 @@ dumpimage-mkimage-objs := aisimage.o \
 			default_image.o \
 			lib/fdtdec_common.o \
 			lib/fdtdec.o \
+			fit_common.o \
+			fit_image.o \
+			common/image-fit.o \
+			image-host.o \
 			common/image.o \
 			imagetool.o \
 			imximage.o \
@@ -119,6 +145,9 @@ dumpimage-mkimage-objs := aisimage.o \
 			gpimage-common.o \
 			mtk_image.o \
 			$(RSA_OBJS-y) \
+			$(CRYPTO_COMMON_OBJS-y) \
+			$(ECDSA_OBJS-y) \
+			$(XMSS_OBJS-y) \
 			$(AES_OBJS-y)
 
 dumpimage-objs := $(dumpimage-mkimage-objs) dumpimage.o
@@ -138,6 +167,9 @@ ifdef CONFIG_FIT_SIGNATURE
 # is tricky, so manually define this options here.
 HOST_EXTRACFLAGS	+= -DCONFIG_FIT_SIGNATURE
 HOST_EXTRACFLAGS	+= -DCONFIG_FIT_SIGNATURE_MAX_SIZE=$(CONFIG_FIT_SIGNATURE_MAX_SIZE)
+ifdef CONFIG_XMSS
+HOST_EXTRACFLAGS	+= -DCONFIG_XMSS
+endif
 endif
 
 ifdef CONFIG_FIT_CIPHER
@@ -156,11 +188,15 @@ endif
 
 # MXSImage needs LibSSL
 ifneq ($(CONFIG_MX23)$(CONFIG_MX28)$(CONFIG_ARMADA_38X)$(CONFIG_FIT_SIGNATURE)$(CONFIG_FIT_CIPHER),)
-HOSTCFLAGS_kwbimage.o += \
-	$(shell pkg-config --cflags libssl libcrypto 2> /dev/null || echo "")
+# If XMSS is enabled, use libcrypto with XMSS
+ifneq ($(CONFIG_XMSS),)
+HOST_EXTRACFLAGS += -I${CONFIG_XMSS_OPENSSL_DIR}/include
+HOSTLOADLIBES_mkimage += -L${CONFIG_XMSS_OPENSSL_DIR} \
+			 -lssl-with-xmss -lcrypto-with-xmss -lpthread -ldl
+else
 HOSTLDLIBS_mkimage += \
 	$(shell pkg-config --libs libssl libcrypto 2> /dev/null || echo "-lssl -lcrypto")
-
+endif
 # OS X deprecate openssl in favour of CommonCrypto, supress deprecation
 # warnings on those systems
 ifeq ($(HOSTOS),darwin)

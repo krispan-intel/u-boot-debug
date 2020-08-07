@@ -1145,6 +1145,7 @@ int fit_image_verify_with_data(const void *fit, int image_noffset,
 			       const void *data, size_t size);
 int fit_image_verify(const void *fit, int noffset);
 int fit_config_verify(const void *fit, int conf_noffset);
+int fit_config_check_svn(const void *fit, int conf_noffset);
 int fit_all_image_verify(const void *fit);
 int fit_config_decrypt(const void *fit, int conf_noffset);
 int fit_image_check_os(const void *fit, int noffset, uint8_t os);

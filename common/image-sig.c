@@ -16,8 +16,10 @@
 DECLARE_GLOBAL_DATA_PTR;
 #endif /* !USE_HOSTCC*/
 #include <image.h>
+#include <u-boot/ecdsa.h>
 #include <u-boot/rsa.h>
 #include <u-boot/rsa-checksum.h>
+#include <u-boot/xmss.h>
 
 #define IMAGE_MAX_HASHED_NODES		100
 
@@ -42,6 +44,30 @@ struct checksum_algo checksum_algos[] = {
 #endif
 		.calculate = hash_calculate,
 	},
+#ifdef CONFIG_FIT_ENABLE_SHA384_SUPPORT
+	{
+		.name = "sha384",
+		.checksum_len = SHA384_SUM_LEN,
+		.der_len = SHA384_DER_LEN,
+		.der_prefix = sha384_der_prefix,
+#if IMAGE_ENABLE_SIGN
+		.calculate_sign = EVP_sha384,
+#endif	/* IMAGE_ENABLE_SIGN */
+		.calculate = hash_calculate,
+	},
+#endif	/* CONFIG_FIT_ENABLE_SHA384_SUPPORT */
+#ifdef CONFIG_FIT_ENABLE_SHA512_SUPPORT
+	{
+		.name = "sha512",
+		.checksum_len = SHA512_SUM_LEN,
+		.der_len = SHA512_DER_LEN,
+		.der_prefix = sha512_der_prefix,
+#if IMAGE_ENABLE_SIGN
+		.calculate_sign = EVP_sha512,
+#endif	/* IMAGE_ENABLE_SIGN */
+		.calculate = hash_calculate,
+	},
+#endif/* CONFIG_FIT_ENABLE_SHA512_SUPPORT */
 #ifdef CONFIG_SHA384
 	{
 		.name = "sha384",
@@ -70,6 +96,7 @@ struct checksum_algo checksum_algos[] = {
 };
 
 struct crypto_algo crypto_algos[] = {
+#if USE_HOSTCC || CONFIG_RSA
 	{
 		.name = "rsa2048",
 		.key_len = RSA2048_BYTES,
@@ -83,8 +110,26 @@ struct crypto_algo crypto_algos[] = {
 		.sign = rsa_sign,
 		.add_verify_data = rsa_add_verify_data,
 		.verify = rsa_verify,
-	}
-
+	},
+#endif /* USE_HOSTCC || CONFIG_RSA */
+#if USE_HOSTCC || CONFIG_ECDSA
+	{
+		.name = "ecdsa384",
+		.key_len = ECDSA384_PRIV_KEY_BYTES,
+		.sign = ecdsa_sign,
+		.add_verify_data = ecdsa_add_verify_data,
+		.verify = ecdsa_verify,
+	},
+#endif	/* USE_HOSTCC || CONFIG_ECDSA */
+#if USE_HOSTCC || CONFIG_XMSS
+	{
+		.name = "xmss-with-sha256",
+		.key_len = 0, /* Not used for XMSS. */
+		.sign = fit_xmss_sign,
+		.add_verify_data = fit_xmss_add_verify_data,
+		.verify = fit_xmss_verify,
+	},
+#endif	/* USE_HOSTCC && CONFIG_XMSS */
 };
 
 struct padding_algo padding_algos[] = {

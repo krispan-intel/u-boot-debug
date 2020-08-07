@@ -126,7 +126,7 @@ config XMSS_ENGINE_THUNDERBAY
 # upstream OpenSSL.
 config XMSS_OPENSSL_DIR
 	string "The patch to the compiled XMSS OpenSSL library"
-	default "../openssl"
+	default "../../openssl"
 	help
 	  Specify the path to the directory containing the compiled static
 	  OpenSSL library with XMSS support.  The directory must also contain

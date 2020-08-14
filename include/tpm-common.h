@@ -265,6 +265,15 @@ int tpm_xfer(struct udevice *dev, const u8 *sendbuf, size_t send_size,
 int tpm_init(struct udevice *dev);
 
 /**
+ * Deinitialize TPM device.  Should be called before transferring execution
+ * to OS.
+ *
+ * @dev - TPM device
+ * @return 0 on success, non-0 on error.
+ */
+int tpm_deinit(struct udevice *dev);
+
+/**
  * Retrieve the array containing all the v1 (resp. v2) commands.
  *
  * @return a struct cmd_tbl array.

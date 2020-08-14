@@ -277,6 +277,12 @@
 		compatible = "intel,thunderbay-xmss";
 	};
 
+	rst_cpuss: reset-controller@88830040 {
+		compatible = "intel,thunderbay-cpuss-rst";
+		reg = <0x0 0x88830040 0x0 0x10>;
+		#reset-cells = <1>;
+	};
+
 	rst_pss1: reset-controller@80430000 {
 		compatible = "intel,thunderbay-pss-rst1";
 		reg = <0x0 0x80430000 0x0 0x10404>;

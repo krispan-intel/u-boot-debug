@@ -808,12 +808,19 @@ static int thb_tpm_change_platform_auth_hierarchy(void)
 
 static int thb_tpm_close(void)
 {
-#ifdef THB_SECURITY_FEATURE
-	if (tpm_deinit()) {
+	int rc = 0;
+	struct udevice *dev;
+
+	rc = get_tpm(&dev);
+	if (rc) {
+		return rc;
+	}
+
+	if (tpm_deinit(dev)) {
 		printf("deinitialize tpm failed\n");
 		return -EINVAL;
 	}
-#endif
+
 	return 0;
 }
 

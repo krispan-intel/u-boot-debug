@@ -85,7 +85,7 @@
 		};
 
 		optee_tee_shmem: optee_tee_shmem@800000 {
-			reg = <0x0 0x800000 0x0 0x2000000>;
+			reg = <0x0 0x800000 0x0 0x1800000>;
 		};
 	};
 

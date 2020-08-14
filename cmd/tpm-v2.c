@@ -359,6 +359,7 @@ static struct cmd_tbl tpm2_commands[] = {
 	U_BOOT_CMD_MKENT(device, 0, 1, do_tpm_device, "", ""),
 	U_BOOT_CMD_MKENT(info, 0, 1, do_tpm_info, "", ""),
 	U_BOOT_CMD_MKENT(init, 0, 1, do_tpm_init, "", ""),
+	U_BOOT_CMD_MKENT(deinit, 0, 1, do_tpm_deinit, "", ""),
 	U_BOOT_CMD_MKENT(startup, 0, 1, do_tpm2_startup, "", ""),
 	U_BOOT_CMD_MKENT(self_test, 0, 1, do_tpm2_self_test, "", ""),
 	U_BOOT_CMD_MKENT(clear, 0, 1, do_tpm2_clear, "", ""),

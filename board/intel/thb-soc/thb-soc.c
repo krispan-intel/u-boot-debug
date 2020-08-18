@@ -292,9 +292,7 @@ static int measure_boot_kernel_fdt(ocs_hash_alg_t hash_alg)
 	}
 	if (hash_alg == OCS_HASH_SHA384) {
 		printf("Measured boot SHA384: Writing to THB_TPM_KERNEL_PCR_INDEX ...\n");
-#ifdef THB_SECURITY_FEATURE
 		rc = tpm2_pcr_extend_sha384(dev, THB_TPM_KERNEL_PCR_INDEX, kernel_hash);
-#endif
 	}
 	if (rc) {
 		printf("%s: tpm2_pcr_extend failed ret %d\n", __func__, rc);
@@ -311,9 +309,7 @@ static int measure_boot_kernel_fdt(ocs_hash_alg_t hash_alg)
 	}
 	if (hash_alg == OCS_HASH_SHA384) {
 		printf("Measured boot SHA384: Writing to THB_TPM_FDT_PCR_INDEX...\n");
-#ifdef THB_SECURITY_FEATURE
 		rc = tpm2_pcr_extend_sha384(dev, THB_TPM_FDT_PCR_INDEX, fdt_hash);
-#endif
 	}
 	if (rc) {
 		printf("%s: tpm2_pcr_extend failed ret %d\n", __func__, rc);
@@ -460,7 +456,6 @@ static int measure_boot_bl2(ocs_hash_alg_t *hash_alg)
 		      bl_ctx->tpm_secure_world_bl2_digest);
 
 		printf("Measured boot SHA384: Writing to THB_TPM_BL2_FROM_BL1_PCR_INDEX...\n");
-#ifdef THB_SECURITY_FEATURE
 		rc = tpm2_pcr_extend_sha384(dev, THB_TPM_BL2_FROM_BL1_PCR_INDEX,
 					    bl_ctx->tpm_secure_world_bl2_digest);
 		if (rc) {
@@ -468,11 +463,9 @@ static int measure_boot_bl2(ocs_hash_alg_t *hash_alg)
 			       __func__, rc);
 			return -EINVAL;
 		}
-#endif
 
 		printf("Measured boot : Writing to THB_TPM_BL2_FROM_BL1_PCR_INDEX...SUCCESS\n");
 		printf("Measured boot SHA384: Writing to THB_TPM_BL2_PCR_INDEX...\n");
-#ifdef THB_SECURITY_FEATURE
 		rc = tpm2_pcr_extend_sha384(dev, THB_TPM_BL2_PCR_INDEX,
 					    bl_ctx->tpm_secure_world_digest);
 		if (rc) {
@@ -480,14 +473,12 @@ static int measure_boot_bl2(ocs_hash_alg_t *hash_alg)
 			       __func__, rc);
 			return -EINVAL;
 		}
-#endif
 
 		printf("Measured boot : Writing to THB_TPM_BL2_PCR_INDEX... SUCCESS\n");
 		debug("%s: tpm_normal_world_digest: %p\n", __func__,
 		      bl_ctx->tpm_normal_world_digest);
 
 		printf("Measured boot SHA384: Writing to THB_TPM_BL33_PCR_INDEX...\n");
-#ifdef THB_SECURITY_FEATURE
 		rc = tpm2_pcr_extend_sha384(dev, THB_TPM_BL33_PCR_INDEX,
 					    bl_ctx->tpm_normal_world_digest);
 		if (rc) {
@@ -495,7 +486,6 @@ static int measure_boot_bl2(ocs_hash_alg_t *hash_alg)
 			       __func__, rc);
 			return -EINVAL;
 		}
-#endif
 
 		printf("Measured boot : Writing to THB_TPM_BL33_PCR_INDEX...SUCCESS\n");
 		*hash_alg = bl_ctx->tpm_hash_alg_type;

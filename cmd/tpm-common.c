@@ -333,7 +333,7 @@ int do_tpm_info(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 	return 0;
 }
 
-int do_tpm_deinit(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+int do_tpm_deinit(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
 	struct udevice *dev;
 	int rc;

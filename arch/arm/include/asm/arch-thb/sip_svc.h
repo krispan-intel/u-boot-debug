@@ -32,6 +32,12 @@
 #define THB_SIP_SVC_VPU_STOP_FN_ID		(0x8200ff16)
 #define THB_SIP_SVC_CLOCK_DEBUG_CONFIG		(0x8200ff17)
 #define THB_SIP_SVC_BOOT_XMSS_VERIFY		(0x8200ff1d)
+#define THB_SIP_SVC_BOOT_EFUSE_READ             (0x8200ff1f)
+#define THB_SIP_SVC_BOOT_EFUSE_WRITE            (0x8200ff20)
+#define THB_SIP_SVC_BOOT_EFUSE_PROVISION        (0x8200ff21)
+#define THB_SIP_SVC_BOOT_EFUSE_READ_STATUS      (0x8200ff22)
+
+#define EFUSE_PDATA_MAX_SIZE                    (0x400)
 
 enum thb_imr {
 	MA_IMR_0 = 0,
@@ -52,6 +58,24 @@ enum thb_imr {
 	MA_IMR_15,
 	MA_IMR_MAX_NUM
 };
+
+/* Flag determines the behaviour during the programing of the fuses.
+ * SOC_EFUSE_FLAG_READBACK - Will write back the value in the
+ *                          buffer provided after fuses are programmed.
+ * SOC_EFUSE_FLAG_NO_VERIFY - Will not perform verification after
+ *                           programing the fuses, the default
+ *                           behaviour is to verify.
+ * SOC_EFUSE_FLAG_REPAIR     Will try to repair the fuse location in case of
+ *                        programming failure,if repair bits available.
+ * The flags can be OR'd together or used separately.
+ */
+enum soc_efuse_write_flags {
+        SOC_EFUSE_NO_FLAG = 0,
+        SOC_EFUSE_FLAG_READBACK,
+        SOC_EFUSE_FLAG_NO_VERIFY,
+        SOC_EFUSE_FLAG_REPAIR = 4
+};
+
 
 /**
  * sip_svc_imr_setup() - Set up an Isolated Memory Region (IMR)
@@ -239,5 +263,132 @@ static inline int sip_svc_get_bl_ctx(uintptr_t buffer_paddr, uint64_t size)
 
 	return res.a0;
 }
+
+
+/*
+ * sip_svc_efuse_read_ranges() - Read fuse values between indices given.
+ * @boot_operation:             u32 pointer to buffer where the fuses values
+ *                              would be read to.
+ * @start_u32_idx:              starting index of the fuse to be read.
+ * @end_u32_idx:                last index of fuse to be read.
+ *
+ * The boot_operation should be pre-allocated by user in the secure world
+ * shared memory region.
+ *
+ * Return: 0 for success, anything else for failure.
+ */
+static inline int sip_svc_efuse_read_ranges(const uintptr_t boot_operation,
+                                            const uint32_t start_u32_idx,
+                                            const uint32_t end_u32_idx)
+{
+        struct arm_smccc_res res = { 0 };
+
+        flush_dcache_range((unsigned long)boot_operation,
+                           (unsigned long)boot_operation +
+                           (sizeof(u32) * ((end_u32_idx - start_u32_idx) + 1)));
+
+        arm_smccc_smc(THB_SIP_SVC_BOOT_EFUSE_READ,
+                      boot_operation,
+                      start_u32_idx,
+                      end_u32_idx,
+                      0, 0, 0, 0, &res);
+
+        return res.a0;
+}
+
+
+
+/*
+ * sip_svc_efuse_write_ranges() - Write fuse values between indices given.
+ * @boot_operation:             u32 pointer to buffer where the fuses values
+ *                              would be read to.
+ * @fuse_mask:                  u32 pointer to buffer containing the
+ *                              fuse mask bits.
+ * @start_u32_idx:              starting index of the fuse to be read.
+ * @end_u32_idx:                last index of fuse to be read.
+ * @flags:                      Flags for repair/verify behaviour.
+ *
+ * The boot_operation and fuse_mask should be pre-allocated by
+ * user in the secure world
+ * shared memory region.
+ *
+ * Return: 0 for success, anything else for failure.
+ */
+static inline int sip_svc_efuse_write_ranges(const uintptr_t boot_operation,
+                                             const uintptr_t fuse_mask,
+                                             const uint32_t start_u32_idx,
+                                             const uint32_t end_u32_idx,
+                                             enum soc_efuse_write_flags flags)
+{
+        struct arm_smccc_res res = { 0 };
+
+        flush_dcache_range((unsigned long)boot_operation,
+                           (unsigned long)boot_operation +
+                           (sizeof(u32) * ((end_u32_idx - start_u32_idx) + 1)));
+
+        flush_dcache_range((unsigned long)fuse_mask,
+                           (unsigned long)fuse_mask +
+                           (sizeof(u32) * ((end_u32_idx - start_u32_idx) + 1)));
+
+        arm_smccc_smc(THB_SIP_SVC_BOOT_EFUSE_WRITE,
+                      boot_operation,
+                      fuse_mask,
+                      start_u32_idx,
+                      end_u32_idx,
+                      flags,
+                      0, 0, &res);
+
+        return res.a0;
+}
+
+
+/*
+ * sip_svc_efuse_provision() - Provision fuses by reading the data BLOB.
+ * @blob_address:               u32 pointer to fuse platform data.
+ * @blob_size:                  Size of the blob.
+ *
+ * The blob_address should be pre-allocated by user in the secure world
+ * shared memory region and should not exceed EFUSE_PDATA_MAX_SIZE.
+ *
+ * Return: 0 for success, anything else for failure.
+ */
+static inline int sip_svc_efuse_provision(const uintptr_t blob_address,
+                                          const size_t blob_size)
+{
+        struct arm_smccc_res res = { 0 };
+
+        flush_dcache_range((unsigned long)blob_address,
+                           (unsigned long)blob_address + EFUSE_PDATA_MAX_SIZE);
+
+        arm_smccc_smc(THB_SIP_SVC_BOOT_EFUSE_PROVISION,
+                      (const uintptr_t)blob_address,
+                      (const size_t)blob_size, 0, 0, 0, 0, 0, &res);
+        return res.a0;
+}
+
+/*
+ * sip_svc_efuse_status() - Return back the efuse status.
+ *
+ * Return: Value in the efuse status register.
+ */
+static inline u32 sip_svc_efuse_status(void)
+{
+        struct arm_smccc_res res = { 0 };
+
+        arm_smccc_smc(THB_SIP_SVC_BOOT_EFUSE_READ_STATUS,
+                      0, 0, 0, 0, 0, 0, 0, &res);
+
+        return (u32)res.a0;
+}
+
+
+
+
+
+
+
+
+
+
 
 #endif /* _ARCH_THB_SIP_SVC_H_ */

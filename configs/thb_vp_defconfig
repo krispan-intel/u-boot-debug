@@ -63,6 +63,7 @@ CONFIG_EFI_PARTITION=y
 # initramfs images not encapsulated in FIT images).
 # TODO: Remove legacy image support once initramfs image is not needed anymore.
 CONFIG_IMAGE_FORMAT_LEGACY=y
+CONFIG_LEGACY_IMAGE_FORMAT=y
 CONFIG_ECDSA=y
 CONFIG_XMSS=y
 # Disable RSA which is enabled by default when CONFIG_FIT_SIGNATURE is enabled

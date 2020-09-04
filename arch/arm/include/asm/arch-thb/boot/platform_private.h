@@ -175,9 +175,34 @@ typedef struct {
 	const uint32_t enc_fwu_key[AES_256_KEY_U32_SIZE]; /* FWU key pdat item. */
         const uint32_t enc_fwu_key_iv[AES_IV_U32_SIZE]; /* FWU key IV pdat item. */
 	const uint8_t slice_en[4]; /*Slice info pdat item. */
+	const uint8_t board_id; /* Board id */
         const uint8_t mem_id; /* Memory Config info pdat item*/
 	const uint8_t dram_mem; /* Total dram memory */
 	const uint8_t boot_mode; /* Boot mode */
 } platform_bl_ctx_t;
+
+/**
+ * Board Mapping Type values/index
+ */
+enum board_mapping_t {
+        BOARD_TYPE_VVF1         = 0x0,
+        BOARD_TYPE_Rsvd1        = 0x1,
+        BOARD_TYPE_Rsvd2        = 0x2,
+        BOARD_TYPE_Rsvd3        = 0x3,
+        BOARD_TYPE_Rsvd4        = 0x4,
+        BOARD_TYPE_Rsvd5        = 0x5,
+        BOARD_TYPE_Rsvd6        = 0x6,
+        BOARD_TYPE_Rsvd7        = 0x7,
+        BOARD_TYPE_CRB1F1       = 0x8,
+        BOARD_TYPE_CRB1F2       = 0x9,
+        BOARD_TYPE_HDDLF1       = 0xA,
+        BOARD_TYPE_HDDLF2       = 0xB,
+        BOARD_TYPE_CRB2F1       = 0xC,
+        BOARD_TYPE_RsvdD        = 0xD,
+        BOARD_TYPE_RsvdE        = 0xE,
+        BOARD_TYPE_RsvdF        = 0xF,
+        /*end*/
+        MAX_BOARD_TYPE_MAPPING
+};
 
 #endif /* __PLATFORM_PRIVATE_H__ */

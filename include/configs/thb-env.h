@@ -28,6 +28,10 @@
 #define THB_PRIME_1_2_8GB_DTB_CONF	"thb_prime_1_2_8gb@1"
 #define THB_PRIME_1_3_4GB_DTB_CONF	"thb_prime_1_3_4gb@1"
 #define THB_PRIME_1_3_8GB_DTB_CONF	"thb_prime_1_3_8gb@1"
+#define THB_PRIME_CRB2_0_2_4GB_DTB_CONF	"thb_prime_crb2_0_2_4gb@1"
+#define THB_PRIME_CRB2_0_3_4GB_DTB_CONF	"thb_prime_crb2_0_3_4gb@1"
+#define THB_PRIME_CRB2_1_2_4GB_DTB_CONF	"thb_prime_crb2_1_2_4gb@1"
+#define THB_PRIME_CRB2_1_3_4GB_DTB_CONF	"thb_prime_crb2_1_3_4gb@1"
 
 
 #ifndef __ASSEMBLY__

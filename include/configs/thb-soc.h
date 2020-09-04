@@ -97,10 +97,10 @@
  *  bootargs contains debug UART only
  */
 #define THB_PCIE_BOOTCMD                                                       \
-        "thunderbay_pcie_boot ${kernel_addr} ${initrd_addr};\0"                   \
-        "booti ${kernel_addr} ${initrd_addr} ${fdt_addr}"
-/*#define THB_PCIE_BOOTARGS "earlycon=uart8250,mmio32,0x80460000"*/
-#define THB_PCIE_BOOTARGS "console=ttyS0,115200"
+        "thb_pcie_boot ${flashless_addr} ${ramfs_addr};"                   \
+        "bootm ${flashless_addr}#${dtb_conf} ${ramfs_addr}\0"
+#define THB_PCIE_BOOTARGS "root=/dev/mem0 console=ttyS0,115200 rootwait rw rootfstype=ramfs"
+
 /*
  * USB Configuration:
  * - Kernel image and ramfs will be loaded through fastboot (as a single FIT
@@ -218,6 +218,8 @@
 	"env_mmc_blknum_redund=0xfc0\0"                                        \
 	"env_mmc_nblks=0x40\0"                                                 \
 	"bootargs=console=ttyS0,115200\0"    			                \
+	"flashless_addr=0x1100000000\0"						\
+	"ramfs_addr=0x101C200000\0"						\
 	"fdt_high=0x101A1FFFFF\0"                                                \
 	"initrd_addr=0x101A200000\0"                                             \
 	"kernel_addr=0x100A000000\0"                                             \

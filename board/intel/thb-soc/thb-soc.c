@@ -46,6 +46,9 @@ extern int get_tpm(struct udevice **devp);
 
 phys_size_t get_effective_memsize(void);
 
+u8 board_type_crb2  __attribute__ ((section(".data")));
+u8 board_id  __attribute__ ((section(".data")));
+
 DECLARE_GLOBAL_DATA_PTR;
 
 static struct mm_region thb_mem_map[] = {
@@ -593,11 +596,17 @@ static void setup_boot_mode(void)
 	case MA_BOOT_INTF_PCIE:
 		pr_info("Boot Interface :PCIe\n");
 		config_dtb_blob();
-		set_boot_env_config("eMMC", THB_EMMC_BOOTCMD,
+
+		if(board_type_crb2) /*No eMMC for CRB2 */
+		{
+			set_boot_env_config("PCIe", THB_PCIE_BOOTCMD,
+		                    THB_PCIE_BOOTARGS);
+		}
+		else{
+			/*we use eMMC only for Kernel Boot*/
+			set_boot_env_config("eMMC", THB_EMMC_BOOTCMD,
 				    THB_EMMC_BOOTARGS);
-		/*TBU SK: for now we use eMMC only for Kernel Boot
-		   set_boot_env_config("PCIe", THB_PCIE_BOOTCMD,
-		                    THB_PCIE_BOOTARGS);*/
+		}
 		break;
 	case MA_BOOT_INTF_SPI:
 		break;
@@ -904,6 +913,11 @@ phys_size_t get_effective_memsize(void)
 	}
 
 	boot_mode = plat_bl_ctx.boot_mode; /* Update here to avoid calling bl_ctx multiple times*/
+	board_id = plat_bl_ctx.board_id;
+
+	if(board_id == BOARD_TYPE_CRB2F1)  /* For Flashless Boot Configuration */
+		board_type_crb2 = 1;
+
 	dram_sz = plat_bl_ctx.dram_mem;
 
 	/* Slice 0 Enable */
@@ -971,14 +985,28 @@ phys_size_t get_effective_memsize(void)
 void config_dtb_blob(void)
 {
 
+	env_set_ulong("board_id",board_id);
+
 	if (slice_mem_map[SLICE_0_2][SLICE_4GB]) {
-		env_set("dtb_conf", THB_PRIME_0_2_4GB_DTB_CONF);
+		if(board_type_crb2)
+			env_set("dtb_conf", THB_PRIME_CRB2_0_2_4GB_DTB_CONF);
+		else
+			env_set("dtb_conf", THB_PRIME_0_2_4GB_DTB_CONF);
 	} else if (slice_mem_map[SLICE_0_3][SLICE_4GB]) {
-		env_set("dtb_conf", THB_PRIME_0_3_4GB_DTB_CONF);
+		if(board_type_crb2)
+			env_set("dtb_conf", THB_PRIME_CRB2_0_3_4GB_DTB_CONF);
+		else
+			env_set("dtb_conf", THB_PRIME_0_3_4GB_DTB_CONF);
 	} else if (slice_mem_map[SLICE_1_2][SLICE_4GB]) {
-		env_set("dtb_conf", THB_PRIME_1_2_4GB_DTB_CONF);
+		if(board_type_crb2)
+			env_set("dtb_conf", THB_PRIME_CRB2_1_2_4GB_DTB_CONF);
+		else
+			env_set("dtb_conf", THB_PRIME_1_2_4GB_DTB_CONF);
 	} else if (slice_mem_map[SLICE_1_3][SLICE_4GB]) {
-		env_set("dtb_conf", THB_PRIME_1_3_4GB_DTB_CONF);
+		if(board_type_crb2)
+			env_set("dtb_conf", THB_PRIME_CRB2_1_3_4GB_DTB_CONF);
+		else
+			env_set("dtb_conf", THB_PRIME_1_3_4GB_DTB_CONF);
 	} else if (slice_mem_map[SLICE_0_2][SLICE_8GB]) {
 		env_set("dtb_conf", THB_PRIME_0_2_8GB_DTB_CONF);
 	} else if (slice_mem_map[SLICE_0_3][SLICE_8GB]) {

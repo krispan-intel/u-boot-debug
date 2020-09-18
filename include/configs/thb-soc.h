@@ -16,7 +16,7 @@
 #include <linux/sizes.h>
 #include <configs/thb-env.h>
 #ifdef CONFIG_ENABLE_MENDER
-#include <configs/thb-vp-mender.h>
+#include <configs/thb-soc-mender.h>
 #endif /* CONFIG_ENABLE_MENDER */
 
 /* TBH Prime slice map and memory index */
@@ -84,13 +84,13 @@
  * TODO: remove initramfs part, remove initrd from booti
  * TODO: add root=/dev/mmcblk0pX parameter to bootargs
  */
+#ifndef CONFIG_ENABLE_MENDER
 #define THB_EMMC_BOOTCMD                                                       \
 	"if test -e mmc 0:4 auto.scr; then echo found bootscript;load mmc 0:4 0x101C200000 auto.scr;source 0x101C200000; \
 	 echo script loading failed: continuing...; fi;"\
         "mmc dev 0;echo loading Kernel...;echo load mmc 0:4 '$fit_addr' Image; load mmc 0:4 ${fit_addr} Image; \
 		echo bootm '${fit_addr}'#${dtb_conf};bootm ${fit_addr}#${dtb_conf}\0"
 
-#define THB_EMMC_BOOTARGS "root=/dev/mmcblk0p5 rootwait rw mender.data=PARTLABEL=data console=ttyS0,115200"
 /*
  * PCIe Configuration:
  *  Kernel image and ramfs will be loaded from host memory.
@@ -99,6 +99,29 @@
 #define THB_PCIE_BOOTCMD                                                       \
         "thb_pcie_boot ${flashless_addr} ${ramfs_addr};"                   \
         "bootm ${flashless_addr}#${dtb_conf} ${ramfs_addr}\0"
+
+#else /* CONFIG_ENABLE_MENDER */
+#define THB_EMMC_BOOTCMD                                                       \
+	"run mender_setup;" \
+	"if test -e mmc 0:4 auto.scr; then echo found bootscript;load mmc 0:4 0x101C200000 auto.scr;source 0x101C200000; \
+	 echo script loading failed: continuing...; fi;"\
+        "mmc dev 0;echo loading Kernel...;echo load mmc 0:4 '$fit_addr' Image; load mmc 0:4 ${fit_addr} Image; \
+		echo bootm '${fit_addr}'#${dtb_conf};bootm ${fit_addr}#${dtb_conf}\0" 	\
+	"run mender_try_to_recover\0"
+
+/*
+ * PCIe Configuration:
+ *  Kernel image and ramfs will be loaded from host memory.
+ *  bootargs contains debug UART only
+ */
+#define THB_PCIE_BOOTCMD                                                       \
+		"run mender_setup;" \
+        "thb_pcie_boot ${flashless_addr} ${ramfs_addr};"                   \
+        "bootm ${flashless_addr}#${dtb_conf} ${ramfs_addr}\0" 				\
+		"run mender_try_to_recover\0"
+#endif 	/* CONFIG_ENABLE_MENDER */
+
+#define THB_EMMC_BOOTARGS "root=/dev/mmcblk0p5 rootwait rw mender.data=PARTLABEL=data console=ttyS0,115200"
 #define THB_PCIE_BOOTARGS "root=/dev/mem0 console=ttyS0,115200 rootwait rw rootfstype=ramfs"
 
 /*
@@ -126,8 +149,6 @@
 
 /* Env size is 32 kB -  env_mmc_nblks bytes */
 //#define CONFIG_ENV_SIZE        THB_ENV_SIZE
-
-#ifndef CONFIG_ENABLE_MENDER
 
 #define BOOT_TARGET_DEVICES(func) func(MMC, mmc, 0)
 
@@ -211,7 +232,7 @@
 #include <config_distro_bootcmd.h>
 #endif
 
-#define CONFIG_EXTRA_ENV_SETTINGS                                              \
+#define THB_ENV_SETTINGS                                              \
 	"loader_mmc_blknum=0x0\0"                                              \
 	"loader_mmc_nblks=0x780\0"                                             \
 	"env_mmc_blknum=0xf80\0"                                               \
@@ -223,6 +244,8 @@
 	"fdt_high=0x101A1FFFFF\0"                                                \
 	"initrd_addr=0x101A200000\0"                                             \
 	"kernel_addr=0x100A000000\0"                                             \
+        "kernel_addr_r=0x100A000000\0"                                           \
+	"scriptaddr=0x100C000000\0"                                              \
 	"fit_addr=0x105C200000\0"                                                \
 	"dtb_addr=0x101A000000\0"						\
 	"load_ramdisk=mmc read ${initrd_addr} 0x8000 0x1000\0"                 \
@@ -232,6 +255,12 @@
 	"partitions=" THB_PARTITION_TABLE_DEFAULT "\0"                \
 	"flash_part= gpt write mmc 0 ${partitions} \0"                \
 	"initrd_high=0xffffffffffffffff\0" BOOTENV
+
+#ifdef CONFIG_ENABLE_MENDER
+#define CONFIG_EXTRA_ENV_SETTINGS  MENDER_ENV_SETTINGS THB_ENV_SETTINGS
+#else
+#define CONFIG_EXTRA_ENV_SETTINGS  THB_ENV_SETTINGS
+#endif /*CONFIG_ENABLE_MENDER*/
 
 //#define CONFIG_SYS_MMC_ENV_DEV THB_SYS_MMC_ENV_DEV
 /* env_mmc_blknum bytes */
@@ -243,20 +272,8 @@
  * 'env_mmc_blknum_redund' env variable.
  */
 //#define CONFIG_ENV_OFFSET_REDUND THB_ENV_OFFSET_REDUND
-
-#else /* CONFIG_ENABLE_MENDER */
-
-#define CONFIG_EXTRA_ENV_SETTINGS                                              \
-	"fdt_high=0x101A1FFFFF\0"                                                \
-	"initrd_addr=0x101A200000\0"                                             \
-        "kernel_addr_r=0x100A000000\0"                                           \
-	"scriptaddr=0x100C000000\0"                                              \
-        "fit_addr=0x105C200000\0"                                                \
-	"dtb_addr=0x101A000000\0"						\
-	"bootargs=rootfstype=ext4 rootwait earlycon console=ttyAMA0\0"         \
-	"bootcmd=" MENDER_DEFAULT_BOOTCMD MENDER_ENV_SETTINGS
-
-#endif /* CONFIG_ENABLE_MENDER */
+/* Use MMC partition zero to select whole user area of memory card. */
+#define CONFIG_SYS_MMC_ENV_PART 0
 
 /* Monitor Command Prompt */
 #define CONFIG_SYS_CBSIZE 512

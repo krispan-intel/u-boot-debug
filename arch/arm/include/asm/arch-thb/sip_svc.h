@@ -22,8 +22,8 @@
 #include <cpu_func.h>
 
 #define THB_SIP_SVC_VPU_BOOT_FN_ID		(0x8200ff10)
-#define THB_SIP_SVC_IMR_SETUP			(0x8200ff12)
-#define THB_SIP_SVC_IMR_CLEAR			(0x8200ff13)
+#define THB_SIP_SVC_IMR_PCIE_SETUP			(0x8200ff12)
+#define TMB_SIP_SVC_IMR_PCIE_CLEAR			(0x8200ff13)
 #define THB_SIP_SVC_IMR_FULL_DDR_A53_ONLY	(0x8200ff14)
 #define THB_SIP_SVC_BOOT_ECDSA_P384_VERIFY	(0x8200ff0B)
 #define THB_SIP_SVC_BL1_CTX			(0x8200ff08)
@@ -90,7 +90,8 @@ enum soc_efuse_write_flags {
  *
  * Return: 0 for success, anything else for failure.
  */
-static inline int sip_svc_imr_setup(enum thb_imr imr, uint64_t imr_base,
+#if 0
+static inline int sip_svc_imr_setup(enum kmb_imr imr, uint64_t imr_base,
 				    uint64_t imr_size, uint64_t init_rd_mask,
 				    uint64_t init_wr_mask)
 {
@@ -101,6 +102,16 @@ static inline int sip_svc_imr_setup(enum thb_imr imr, uint64_t imr_base,
 
 	return res.a0;
 }
+#endif
+static inline int sip_svc_imr_pcie_enable_firewall()
+{
+        struct arm_smccc_res res = { 0 };
+
+        arm_smccc_smc(THB_SIP_SVC_IMR_PCIE_SETUP, 0, 0, 0,
+                      0, 0, 0, 0, &res);
+
+        return res.a0;
+}
 
 /*
  * sip_svc_imr_clear() - Clear an Isolated Memory Region (IMR).
@@ -108,11 +119,11 @@ static inline int sip_svc_imr_setup(enum thb_imr imr, uint64_t imr_base,
  *
  * Return: 0 for success, anything else for failure.
  */
-static inline int sip_svc_imr_clear(enum thb_imr imr)
+static inline int sip_svc_imr_pcie_disable_firewall()
 {
 	struct arm_smccc_res res = { 0 };
 
-	arm_smccc_smc(THB_SIP_SVC_IMR_CLEAR, imr, 0, 0, 0, 0, 0, 0,
+	arm_smccc_smc(TMB_SIP_SVC_IMR_PCIE_CLEAR, 0, 0, 0, 0, 0, 0, 0,
 		      &res);
 
 	return res.a0;
@@ -127,11 +138,11 @@ static inline int sip_svc_imr_clear(enum thb_imr imr)
  *
  * Return: 0 for success, anything else for failure.
  */
-static inline int sip_svc_imr_protect_full_ddr(enum thb_imr imr)
+static inline int sip_svc_imr_protect_full_ddr()
 {
 	struct arm_smccc_res res = { 0 };
 
-	arm_smccc_smc(THB_SIP_SVC_IMR_FULL_DDR_A53_ONLY, imr, 0, 0, 0, 0, 0, 0,
+	arm_smccc_smc(THB_SIP_SVC_IMR_FULL_DDR_A53_ONLY, 0, 0, 0, 0, 0, 0, 0,
 		      &res);
 
 	return res.a0;

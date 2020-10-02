@@ -160,9 +160,18 @@ int thb_imr_post_u_boot_reloc(void)
  */
 int thb_imr_bootm_start(void)
 {
-	return sip_svc_imr_protect_full_ddr(FULL_DDR_IMR);
+	return sip_svc_imr_protect_full_ddr();
 }
 
+int thb_imr_pcie_enable_firewall()
+{
+	return sip_svc_imr_pcie_enable_firewall();
+}
+
+int thb_imr_pcie_disable_firewall()
+{
+	return sip_svc_imr_pcie_disable_firewall();
+}
 /*
  * This function is called by board_preboot_os() (defined in thb_fpga.c),
  * which in turn is called right before the OS is booted.

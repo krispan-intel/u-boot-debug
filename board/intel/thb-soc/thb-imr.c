@@ -158,7 +158,7 @@ int thb_imr_post_u_boot_reloc(void)
  *
  * We use it to set up the IMR protecting the entire DDR.
  */
-int thb_imr_bootm_start(void)
+int thb_imr_preboot_start(void)
 {
 	return sip_svc_imr_protect_full_ddr();
 }

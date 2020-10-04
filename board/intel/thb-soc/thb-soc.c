@@ -871,8 +871,8 @@ void board_preboot_os(void)
 		}
 	}
 
-	 printf("%s\n",__func__);
-        if (thb_imr_bootm_start()) {
+	printf("%s\n",__func__);
+        if (thb_imr_preboot_start()) {
                 printf("%s: error: IMR setup failed\n", __func__);
                 hang();
         }
@@ -887,11 +887,7 @@ void board_preboot_os(void)
 
 void board_bootm_start(void)
 {
-	printf("%s\n",__func__);
-	if (thb_imr_bootm_start()) {
-		printf("%s: error: IMR setup failed\n", __func__);
-		hang();
-	}
+
 }
 
 /* Mapping of TBH Prime Slices and Memory Cfg */

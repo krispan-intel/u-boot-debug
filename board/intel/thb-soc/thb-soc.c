@@ -870,8 +870,10 @@ void board_preboot_os(void)
 			board_boot_fail(SECURITY_FAIL_TPM_DEINIT);
 		}
 	}
-
-	printf("%s\n",__func__);
+	/* Below call will trigger SMC and call BL31 to setup Linux runtime firewall
+         * and lock the firewall setting.
+         */
+	printf("Firewall: Set Kernel Firewall\n",__func__);
         if (thb_imr_preboot_start()) {
                 printf("%s: error: IMR setup failed\n", __func__);
                 hang();

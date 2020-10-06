@@ -24,7 +24,7 @@
 #define THB_SIP_SVC_VPU_BOOT_FN_ID		(0x8200ff10)
 #define THB_SIP_SVC_IMR_PCIE_SETUP			(0x8200ff12)
 #define TMB_SIP_SVC_IMR_PCIE_CLEAR			(0x8200ff13)
-#define THB_SIP_SVC_IMR_FULL_DDR_A53_ONLY	(0x8200ff14)
+#define THB_SIP_SVC_BOOT_IMR_KERNEL_RUNTIME	(0x8200ff14)
 #define THB_SIP_SVC_BOOT_ECDSA_P384_VERIFY	(0x8200ff0B)
 #define THB_SIP_SVC_BL1_CTX			(0x8200ff08)
 #define THB_SIP_SVC_BL_CTX			(0x8200ff09)
@@ -117,7 +117,7 @@ static inline int sip_svc_imr_protect_full_ddr()
 {
 	struct arm_smccc_res res = { 0 };
 
-	arm_smccc_smc(THB_SIP_SVC_IMR_FULL_DDR_A53_ONLY, 0, 0, 0, 0, 0, 0, 0,
+	arm_smccc_smc(THB_SIP_SVC_BOOT_IMR_KERNEL_RUNTIME, 0, 0, 0, 0, 0, 0, 0,
 		      &res);
 
 	return res.a0;

@@ -24,7 +24,7 @@ int thb_imr_post_u_boot_reloc(void);
  *
  * Return: 0 on success, negative error code otherwise.
  */
-int thb_imr_preboot_start(void);
+int thb_imr_bootm_start(void);
 
 /**
  * thb_imr_preboot_os() - Perform pre-boot IMR setup.

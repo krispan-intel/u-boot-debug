@@ -47,6 +47,7 @@ extern int get_tpm(struct udevice **devp);
 phys_size_t get_effective_memsize(void);
 
 u8 board_type_crb2  __attribute__ ((section(".data")));
+u8 board_type_hddl  __attribute__ ((section(".data")));
 u8 board_id  __attribute__ ((section(".data")));
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -597,7 +598,7 @@ static void setup_boot_mode(void)
 		pr_info("Boot Interface :PCIe\n");
 		config_dtb_blob();
 
-		if(board_type_crb2) /*No eMMC for CRB2 */
+		if(board_type_crb2 || board_type_hddl) /*No eMMC for CRB2 / HDDL */
 		{
 			set_boot_env_config("PCIe", THB_PCIE_BOOTCMD,
 		                    THB_PCIE_BOOTARGS);
@@ -918,6 +919,9 @@ phys_size_t get_effective_memsize(void)
 
 	if(board_id == BOARD_TYPE_CRB2F1)  /* For Flashless Boot Configuration */
 		board_type_crb2 = 1;
+
+	if((board_id == BOARD_TYPE_HDDLF1) || (board_id == BOARD_TYPE_HDDLF2))  /* For Flashless Boot Configuration */
+		board_type_hddl = 1;
 
 	dram_sz = plat_bl_ctx.dram_mem;
 

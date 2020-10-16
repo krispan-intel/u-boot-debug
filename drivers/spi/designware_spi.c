@@ -508,10 +508,13 @@ static int poll_transfer(struct dw_spi_priv *priv)
 	return 0;
 }
 
+#define DTS_CS_GPIO_ENABLE 0
 static void external_cs_manage(struct udevice *dev, bool on)
 {
 	u32 val;
 
+#if DTS_CS_GPIO_ENABLE
+	/* TODO: Enable once the gpio fixed in DTS */
 #if CONFIG_IS_ENABLED(DM_GPIO) && !defined(CONFIG_SPL_BUILD)
 	struct dw_spi_priv *priv = dev_get_priv(dev->parent);
 
@@ -521,8 +524,8 @@ static void external_cs_manage(struct udevice *dev, bool on)
 
 	dm_gpio_set_value(&priv->cs_gpio, on ? 1 : 0);
 #endif
-
-	val = __raw_readl(0x8045005C);
+#else
+	val = __raw_readl(0x80458000);
 	if (on) {
 		debug("gpio set to 1\n");
 		val = val | (1 << 23);
@@ -530,7 +533,8 @@ static void external_cs_manage(struct udevice *dev, bool on)
 		debug("gpio set to 0\n");
 		val = val & ~(1 << 23);
 	}
-	__raw_writel(val, 0x8045005C);  // cs gpio
+	__raw_writel(val, 0x80458000);  // cs gpio
+#endif
 }
 
 static int dw_spi_xfer(struct udevice *dev, unsigned int bitlen,

@@ -567,6 +567,14 @@ int image_setup_libfdt(bootm_headers_t *images, void *blob,
                 }
         }
 #endif /* CONFIG_DM_VERITY */
+
+#if CONFIG_XLINK_SECURITY
+	if (xlink_security_setup_boot_args()) {
+		printf("ERROR: Failed to setup xlink_security arguments.");
+		goto err;
+	}
+#endif
+
 	if (fdt_chosen(blob) < 0) {
 		printf("ERROR: /chosen node create failed\n");
 		goto err;

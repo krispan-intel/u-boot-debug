@@ -92,6 +92,12 @@ static int booti_start(struct cmd_tbl *cmdtp, int flag, int argc,
 	}
 #endif  /* CONFIG_DM_VERITY */
 
+#if CONFIG_XLINK_SECURITY
+	if (xlink_security_setup_boot_args()) {
+		printf("ERROR: Failed to setup xlink_security arguments.");
+		return 1;
+	}
+#endif
 	/* Handle BOOTM_STATE_LOADOS */
 	if (relocated_addr != ld) {
 		printf("Moving Image from 0x%lx to 0x%lx, end=%lx\n", ld,

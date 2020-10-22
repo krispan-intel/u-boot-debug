@@ -139,3 +139,5 @@ obj-$(CONFIG_$(SPL_TPL_)YMODEM_SUPPORT) += xyzModem.o
 obj-$(CONFIG_AVB_VERIFY) += avb_verify.o
 
 obj-$(CONFIG_DM_VERITY) += dm_verity.o
+
+obj-$(CONFIG_XLINK_SECURITY) += xlink-security.o

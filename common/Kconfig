@@ -599,6 +599,16 @@ config DM_VERITY
 	  kernel boot args, thus enabling dm-verity for the root fs at boot
 	  time.
 
+config XLINK_SECURITY
+	bool "disable xlink_security"
+	default 0
+	depends on CMD_BOOTI
+	help
+	Enable support for xlink_security information appended to
+	Linux aarch64Images. When enabled, 'booti' looks for appended
+	xlink_security information and adds it to the kernel boot args,
+	thus enabling xlink_security for the root fs at boot time.
+
 config SPL_HASH
 	bool # "Support hashing API (SHA1, SHA256, etc.)"
 	help

@@ -18,14 +18,14 @@
 #define MENDER_UBOOT_ENV_STORAGE_DEVICE_OFFSET_2 	THB_ENV_OFFSET_REDUND
 
 #define MENDER_STORAGE_DEVICE_BASE 		            "/dev/mmcblk0p"
-#define MENDER_KERNEL_PART_A_NUMBER                 2
-#define MENDER_KERNEL_PART_B_NUMBER                 3
+#define MENDER_KERNEL_PART_A_NUMBER                 4
+#define MENDER_KERNEL_PART_B_NUMBER                 7
 #define MENDER_ROOTFS_PART_A_NUMBER 	            5
 #define MENDER_ROOTFS_PART_B_NUMBER 	            8
 
 #define MENDER_BOOTENV_SIZE 			            THB_ENV_SIZE
 
 #define MENDER_BOOT_KERNEL_TYPE 		            "booti"
-#define MENDER_KERNEL_NAME 				            "Image.bin"
+#define MENDER_KERNEL_NAME 			            "Image"
 
 #endif /* _THB_SOC_MENDER_H_ */

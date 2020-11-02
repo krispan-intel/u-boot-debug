@@ -57,6 +57,8 @@
 	"run expand_bootargs; "                                             \
 	"setenv expand_bootargs\0"                                          \
 	"mender_altbootcmd="                                                \
+	"setenv upgrade_available 0; "		\
+	"saveenv;"				\
 	"if test ${mender_boot_part} = " __stringify(MENDER_KERNEL_PART_A_NUMBER) "; "	\
 	"then "										\
 	"setenv mender_boot_part " __stringify(MENDER_KERNEL_PART_B_NUMBER) "; "	\
@@ -66,7 +68,6 @@
 	"setenv mender_rootfs_part " __stringify(MENDER_ROOTFS_PART_A_NUMBER) "; "	\
 	"fi; "					\
 	"setenv upgrade_available 0; "		\
-	"saveenv; "				\
 	"run mender_setup\0"			\
 						\
 	"mender_try_to_recover="		\

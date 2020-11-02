@@ -101,11 +101,14 @@
         "bootm ${flashless_addr}#${dtb_conf} ${ramfs_addr}\0"
 
 #else /* CONFIG_ENABLE_MENDER */
-#define THB_EMMC_BOOTCMD                                                       \
-	"run mender_setup;" \
+#define THB_EMMC_BOOTCMD                      \
+	"if test ${upgrade_available} = 1; "    \
+        "then run mender_altbootcmd; "           \
+	"else run mender_setup;"			\
+        "fi;"					\
 	"if test -e mmc 0:4 auto.scr; then echo found bootscript;load mmc 0:4 0x101C200000 auto.scr;source 0x101C200000; \
 	 echo script loading failed: continuing...; fi;"\
-        "mmc dev 0;echo loading Kernel...;echo load mmc 0:4 '$fit_addr' Image; load mmc 0:4 ${fit_addr} Image; \
+        "mmc dev 0;echo loading Kernel...;echo load mmc 0:${mender_boot_part} '$fit_addr' Image; load mmc 0:${mender_boot_part} ${fit_addr} Image; \
 		echo bootm '${fit_addr}'#${dtb_conf};bootm ${fit_addr}#${dtb_conf}\0" 	\
 	"run mender_try_to_recover\0"
 
@@ -121,7 +124,7 @@
 		"run mender_try_to_recover\0"
 #endif 	/* CONFIG_ENABLE_MENDER */
 
-#define THB_EMMC_BOOTARGS "root=/dev/mmcblk0p5 rootwait rw mender.data=PARTLABEL=data console=ttyS0,115200"
+#define THB_EMMC_BOOTARGS "root=/dev/mmcblk0p${mender_rootfs_part} rootwait rw mender.data=PARTLABEL=data console=ttyS0,115200"
 #define THB_PCIE_BOOTARGS "root=/dev/mem0 console=ttyS0,115200 rootwait rw rootfstype=ramfs"
 
 /*

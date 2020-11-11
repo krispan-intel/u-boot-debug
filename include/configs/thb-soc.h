@@ -118,10 +118,8 @@
  *  bootargs contains debug UART only
  */
 #define THB_PCIE_BOOTCMD                                                       \
-		"run mender_setup;" \
         "thb_pcie_boot ${flashless_addr} ${ramfs_addr};"                   \
-        "bootm ${flashless_addr}#${dtb_conf} ${ramfs_addr}\0" 				\
-		"run mender_try_to_recover\0"
+        "bootm ${flashless_addr}#${dtb_conf} ${ramfs_addr}\0"
 #endif 	/* CONFIG_ENABLE_MENDER */
 
 #define THB_EMMC_BOOTARGS "root=/dev/mmcblk0p${mender_rootfs_part} rootwait rw mender.data=PARTLABEL=data console=ttyS0,115200"

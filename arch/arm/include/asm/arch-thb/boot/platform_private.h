@@ -179,6 +179,7 @@ typedef struct {
         const uint8_t mem_id; /* Memory Config info pdat item*/
 	const uint8_t dram_mem; /* Total dram memory */
 	const uint8_t boot_mode; /* Boot mode */
+	const uint8_t soc_rev; /* soc revision */
 } platform_bl_ctx_t;
 
 /**

@@ -119,6 +119,7 @@ static const struct fdt_string_prop
 
 static platform_boot_intf_t boot_interface = MA_BOOT_INTF_EMMC;
 static uint8_t boot_mode __attribute__ ((section(".data")));
+static uint8_t soc_rev __attribute__ ((section(".data")));
 
 static int fdt_create_node_and_populate(void *fdt, int nodeoffset,
 					const char *nodestring, u32 array_size,
@@ -579,6 +580,15 @@ static void setup_boot_mode(void)
 	} else  {
 		boot_interface = bl1_ctx.boot_interface;
 	}
+
+	if (soc_rev == 0x00) {
+		pr_info("THB(A0)");
+	} else if (soc_rev == 0x01) {
+		pr_info("THB(A1)");
+	} else {
+		//....
+	}
+
 	if (!boot_mode) {
 		/* Open Boot*/
 		env_set("verify", "0");
@@ -916,6 +926,7 @@ phys_size_t get_effective_memsize(void)
 
 	boot_mode = plat_bl_ctx.boot_mode; /* Update here to avoid calling bl_ctx multiple times*/
 	board_id = plat_bl_ctx.board_id;
+	soc_rev = plat_bl_ctx.soc_rev;
 
 	if(board_id == BOARD_TYPE_CRB2F1)  /* For Flashless Boot Configuration */
 		board_type_crb2 = 1;

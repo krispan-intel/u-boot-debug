@@ -911,9 +911,7 @@ phys_size_t get_effective_memsize(void)
 	u8 slice[4] = { 0, 0, 0, 0 };
 	u8 ddr_mem[2] = { 0, 0 };
 	u8 thb_full = 0;
-	u8 dram_sz = 0;
 	u8 count = 0;
-
 	int rc = 0;
 	platform_bl_ctx_t plat_bl_ctx;
 
@@ -933,8 +931,6 @@ phys_size_t get_effective_memsize(void)
 
 	if((board_id == BOARD_TYPE_HDDLF1) || (board_id == BOARD_TYPE_HDDLF2))  /* For Flashless Boot Configuration */
 		board_type_hddl = 1;
-
-	dram_sz = plat_bl_ctx.dram_mem;
 
 	/* Slice 0 Enable */
 	if (plat_bl_ctx.slice_en[0]) {
@@ -984,13 +980,8 @@ phys_size_t get_effective_memsize(void)
 		slice_mem_map[SLICE_FULL][SLICE_8GB] = slice[0] & slice[1] & slice[2] & slice[3] & ddr_mem[1];
 	}
 
-	while (dram_sz != 1) {
-		dram_sz = dram_sz >> 1;
-		count++;
-	}
-
 	/* Total RAM Size */
-	gd->ram_size = (SZ_1G << count) - SECURE_DDR_SIZE - SHARED_DDR_SIZE;
+	gd->ram_size = (plat_bl_ctx.dram_mem * SZ_1G) - SECURE_DDR_SIZE - SHARED_DDR_SIZE;
 
 	return gd->ram_size;
 }

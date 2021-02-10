@@ -160,6 +160,23 @@ union platform_fuse_feature_excludes {
  * Boot context struct with fields set by post ROM BL stages.
  */
 typedef struct {
+	const uint32_t cpu_s_calib_offset;
+	const uint32_t cpu_n_calib_offset;
+	const uint32_t vpu0_calib_offset;
+	const uint32_t media0_calib_offset;
+	const uint32_t vddr0_calib_offset;
+	const uint32_t vpu1_calib_offset;
+	const uint32_t media1_calib_offset;
+	const uint32_t vddr1_calib_offset;
+	const uint32_t vpu2_calib_offset;
+	const uint32_t media2_calib_offset;
+	const uint32_t vddr2_calib_offset;
+	const uint32_t vpu3_calib_offset;
+	const uint32_t media3_calib_offset;
+	const uint32_t vddr3_calib_offset;
+} dts_calib_off_t;
+
+typedef struct {
 	/*
 	 * Size of this struct. Set on BL2 entry.
 	 */
@@ -180,6 +197,8 @@ typedef struct {
 	const uint8_t dram_mem; /* Total dram memory */
 	const uint8_t boot_mode; /* Boot mode */
 	const uint8_t soc_rev; /* soc revision */
+	const uint8_t soc_id; /* soc id 0 for THB full and 1 for THB prime */
+	dts_calib_off_t dts_calibs; /* Calibration offsets for dts sensors */
 } platform_bl_ctx_t;
 
 /**

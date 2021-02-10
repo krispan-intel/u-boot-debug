@@ -44,6 +44,7 @@
 const char version_string[] = U_BOOT_VERSION_STRING CC_VERSION_STRING;
 
 extern int get_tpm(struct udevice **devp);
+static int get_bl_ctx(platform_bl_ctx_t *bl_ctx);
 
 phys_size_t get_effective_memsize(void);
 
@@ -150,6 +151,121 @@ static int fdt_create_node_and_populate(void *fdt, int nodeoffset,
 	return 0;
 }
 
+static int fdt_thb_hddl_dev_fixup(void *fdt)
+{
+	int hddl_dev_off = 0, tsens_off = 0, node = 0;
+	int ret;
+	platform_bl_ctx_t plat_bl_ctx;
+
+	hddl_dev_off =  fdt_path_offset(fdt, "/soc/hddl_device");
+	if (hddl_dev_off < 0) {
+		log_err("Failed to find hddl_device node.\n");
+		return hddl_dev_off;
+	}
+	/* Get BL context structure */
+	ret = get_bl_ctx(&plat_bl_ctx);
+	if (ret) {
+		panic("Failed to retrieve bl ctx, slice and memory selection failed\n");
+	}
+	ret = fdt_setprop_u32(fdt, hddl_dev_off, "id",
+        	              plat_bl_ctx.soc_id);
+	if (ret) {
+        	log_err("Failed to update id in hddl_device node\n");
+	        return ret;
+	}
+	ret = fdt_setprop_u32(fdt, hddl_dev_off, "board_type",
+        	              plat_bl_ctx.board_id);
+	if (ret) {
+        	log_err("Failed to update board id in hddl_device node\n");
+	        return ret;
+	}
+
+	tsens_off =  fdt_path_offset(fdt, "/soc/tsens");
+	if (tsens_off < 0) {
+		log_err("Failed to find tsens node.\n");
+		return tsens_off;
+	}
+	ret = fdt_setprop_u32(fdt, tsens_off, "board_type",
+        	              plat_bl_ctx.board_id);
+	if (ret) {
+        	log_err("Failed to update board id in tsens node\n");
+	        return ret;
+	}
+
+	fdt_for_each_subnode(node, fdt, tsens_off)
+	{
+		int len;
+		const char *node_name;
+
+		node_name = fdt_get_name(fdt, node, &len);
+		if (len < 0) {
+			log_err("unable to get node name.\n");
+			return len;
+		}
+		if (!strcmp(node_name, "cpu_s")) {
+			ret = fdt_setprop_u32(fdt, node, "calib_off",
+				plat_bl_ctx.dts_calibs.cpu_s_calib_offset);
+		}
+		else if (!strcmp(node_name, "cpu_n")) {
+			ret = fdt_setprop_u32(fdt, node, "calib_off",
+				plat_bl_ctx.dts_calibs.cpu_n_calib_offset);
+		}
+		else if (!strcmp(node_name, "vpu0")) {
+			ret = fdt_setprop_u32(fdt, node, "calib_off",
+				plat_bl_ctx.dts_calibs.vpu0_calib_offset);
+		}
+		else if (!strcmp(node_name, "media0")) {
+			ret = fdt_setprop_u32(fdt, node, "calib_off",
+				plat_bl_ctx.dts_calibs.media0_calib_offset);
+		}
+		else if (!strcmp(node_name, "vddr0")) {
+			ret = fdt_setprop_u32(fdt, node, "calib_off",
+				plat_bl_ctx.dts_calibs.vddr0_calib_offset);
+		}
+		else if (!strcmp(node_name, "vpu1")) {
+			ret = fdt_setprop_u32(fdt, node, "calib_off",
+				plat_bl_ctx.dts_calibs.vpu1_calib_offset);
+		}
+		else if (!strcmp(node_name, "media1")) {
+			ret = fdt_setprop_u32(fdt, node, "calib_off",
+				plat_bl_ctx.dts_calibs.media1_calib_offset);
+		}
+		else if (!strcmp(node_name, "vddr1")) {
+			ret = fdt_setprop_u32(fdt, node, "calib_off",
+				plat_bl_ctx.dts_calibs.vddr1_calib_offset);
+		}
+		else if (!strcmp(node_name, "vpu2")) {
+			ret = fdt_setprop_u32(fdt, node, "calib_off",
+				plat_bl_ctx.dts_calibs.vpu2_calib_offset);
+		}
+		else if (!strcmp(node_name, "media2")) {
+			ret = fdt_setprop_u32(fdt, node, "calib_off",
+				plat_bl_ctx.dts_calibs.media2_calib_offset);
+		}
+		else if (!strcmp(node_name, "vddr2")) {
+			ret = fdt_setprop_u32(fdt, node, "calib_off",
+				plat_bl_ctx.dts_calibs.vddr2_calib_offset);
+		}
+		else if (!strcmp(node_name, "vpu3")) {
+			ret = fdt_setprop_u32(fdt, node, "calib_off",
+				plat_bl_ctx.dts_calibs.vpu3_calib_offset);
+		}
+		else if (!strcmp(node_name, "media3")) {
+			ret = fdt_setprop_u32(fdt, node, "calib_off",
+				plat_bl_ctx.dts_calibs.media3_calib_offset);
+		}
+		else if (!strcmp(node_name, "vddr3")) {
+			ret = fdt_setprop_u32(fdt, node, "calib_off",
+				plat_bl_ctx.dts_calibs.vddr3_calib_offset);
+		}
+		if (ret) {
+			log_err("Failed to update calib for %s\n", node_name);
+			return ret;
+		}
+	}
+	return 0;
+}
+
 /*
  * Add some board-specific data to the FDT before booting the
  * OS.
@@ -183,7 +299,10 @@ int ft_board_setup(void *fdt, struct bd_info *bd)
 	if (ret < 0) {
 		return ret;
 	}
-
+	ret = fdt_thb_hddl_dev_fixup(fdt);
+	if (ret < 0) {
+		return ret;
+	}
 	return 0;
 }
 

@@ -6,7 +6,7 @@
  */
 #include <linux/io.h>
 #include <asm/arch-thb/gpio.h>
-#include "tbh_pad_cfg.h"
+#include "thb_pad_cfg.h"
 
 struct pad_control {
 	u32 index;  /* Pin number */

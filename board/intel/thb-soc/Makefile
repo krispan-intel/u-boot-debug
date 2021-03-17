@@ -6,5 +6,5 @@
 #
 # SPDX-License-Identifier:	GPL-2.0+
 #
-obj-y	+= thb-soc.o tbh_pad_cfg.o
+obj-y	+= thb-soc.o thb_pad_cfg.o
 obj-$(CONFIG_THUNDERBAY_MEM_PROTECT) += thb-imr.o

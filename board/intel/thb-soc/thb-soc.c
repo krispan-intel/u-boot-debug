@@ -29,6 +29,7 @@
 #include <tpm-common.h>
 #include <version.h>
 #include "thb-imr.h"
+#include "thb_pad_cfg.h"
 
 #define GPIO_MICRON_FLASH_PULL_UP       20
 
@@ -835,6 +836,16 @@ static int thb_tpm_close(void)
 void board_preboot_os(void)
 {
 	ocs_hash_alg_t hash_alg;
+
+	/* Update the PAD config for OS */
+	if (board_id == BOARD_TYPE_HDDLF1) {
+		pr_info("Applying EVT1 pad cfg\n");
+		evt1_pad_config();
+	}
+	if (board_id == BOARD_TYPE_HDDLF2) {  /* For Flashless Boot Configuration */
+		pr_info("Applying EVT2 pad cfg\n");
+		evt2_pad_config();
+	}
 
 	if (board_is_secure()) {
 		/*

@@ -52,6 +52,12 @@ u8 board_type_crb2 __attribute__ ((section(".data")));
 u8 board_type_hddl __attribute__ ((section(".data")));
 u8 board_id __attribute__ ((section(".data")));
 
+/* Mapping of TBH Prime Slices and Memory Cfg */
+u8 slice_mem_map[SLICE_INDEX][MEM_INDEX] __attribute__ ((section(".data")));
+u8 slice[4] __attribute__ ((section(".data")));
+u8 thb_full __attribute__ ((section(".data")));
+u8 mem_id __attribute__ ((section(".data")));
+
 DECLARE_GLOBAL_DATA_PTR;
 
 static struct mm_region thb_mem_map[] = {
@@ -148,6 +154,107 @@ static int fdt_create_node_and_populate(void *fdt, int nodeoffset,
 		}
 	}
 
+	return 0;
+}
+
+
+/*
+ * THB EVT2 board has smbus@80480000, but  not previous board varints
+ * SMBUS node will be disabled in DTS file for all board varints, it will
+ * be enabled for evt2 in fdt_thb_smbus_fixup
+ *
+ * SMBUS will have different address for THB and THB'. Slave addresses are
+ * updated here.
+ *	THB_FULL:  slave address 0x4000005a
+ *	THB PRIME: slave address 0x4000006a
+ */
+
+static int fdt_thb_smbus_fixup(void *fdt)
+{
+	int smbus_dev_off = 0, node = 0;
+	int ret;
+
+	smbus_dev_off =  fdt_path_offset(fdt, "/soc/smbus@80480000");
+	if (smbus_dev_off < 0) {
+		log_err("Failed to find smbus node.\n");
+		return smbus_dev_off;
+	}
+	/* BOARD_TYPE_HDDLF2 is for EVT2 */
+	if (BOARD_TYPE_HDDLF2 == board_id) {
+		ret = fdt_setprop_string(fdt, smbus_dev_off, "status", "okay");
+
+		if (ret) {
+			log_err("Failed to update id in smbus_device node status\n");
+			return ret;
+		}
+
+		fdt_for_each_subnode(node, fdt, smbus_dev_off) {
+			int len;
+			const char *node_name;
+			unsigned int slave_addr = 0;
+
+			node_name = fdt_get_name(fdt, node, &len);
+			if (len < 0) {
+				log_err("unable to get node name.\n");
+				return len;
+			}
+			if (!strcmp(node_name, "slave_device")) {
+				/* THB_FULL:  slave address 0x4000005a
+				 * THB PRIME: slave address 0x4000006a
+				 * thb_full 1 for THB full and 0 for THB prime
+				 */
+				if (thb_full)
+					slave_addr = 0x4000005a;
+				else
+					slave_addr = 0x4000006a;
+				ret = fdt_setprop_u32(fdt, node, "reg", slave_addr);
+
+				if (ret) {
+					log_err("Failed to update id in smbus slave address\n");
+					return ret;
+				}
+			}
+		}
+	}
+	return 0;
+}
+
+/*
+ * I2C1 is used as Master in evt2 board, however it is used as slave in
+ * other board variants.
+ *
+ * I2C1 slave device node will be 'okay' in dts file, however it will be
+ * disabled for evt2 in fdt_thb_i2c_fixup
+ */
+
+static int fdt_thb_i2c_fixup(void *fdt)
+{
+	int i2c_dev_off = 0, node = 0;
+	int ret;
+
+	i2c_dev_off =  fdt_path_offset(fdt, "/soc/i2c@804a0000");
+	if (i2c_dev_off < 0) {
+		log_err("Failed to find i2c1 node.\n");
+		return i2c_dev_off;
+	}
+
+	 /* BOARD_TYPE_HDDLF2 is for EVT2 */
+	if (BOARD_TYPE_HDDLF2 == board_id) {
+
+		fdt_for_each_subnode(node, fdt, i2c_dev_off) {
+			int len;
+			const char *node_name;
+
+			node_name = fdt_get_name(fdt, node, &len);
+			if (len < 0) {
+				log_err("unable to get node name.\n");
+				return len;
+			}
+			if (!strcmp(node_name, "slave_device@5a")) {
+				ret = fdt_setprop_string(fdt, node, "status", "disabled");
+			}
+		}
+	}
 	return 0;
 }
 
@@ -303,6 +410,17 @@ int ft_board_setup(void *fdt, struct bd_info *bd)
 	if (ret < 0) {
 		return ret;
 	}
+
+	ret = fdt_thb_smbus_fixup(fdt);
+	if (ret < 0) {
+		log_err("Failed to update smbus property\n");
+	}
+
+	ret = fdt_thb_i2c_fixup(fdt);
+	if (ret < 0) {
+		log_err("Failed to update i2c-1 property\n");
+	}
+
 	return 0;
 }
 
@@ -1030,12 +1148,6 @@ void board_bootm_start(void)
 {
 
 }
-
-/* Mapping of TBH Prime Slices and Memory Cfg */
-u8 slice_mem_map[SLICE_INDEX][MEM_INDEX] __attribute__ ((section(".data")));
-u8 slice[4] __attribute__ ((section(".data")));
-u8 thb_full __attribute__ ((section(".data")));
-u8 mem_id __attribute__ ((section(".data")));
 
 phys_size_t get_effective_memsize(void)
 {

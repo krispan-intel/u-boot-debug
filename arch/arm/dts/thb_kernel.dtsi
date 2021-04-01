@@ -162,6 +162,9 @@
 		compatible = "microsoft,ftpm";
 	};
 
+	boot_info {
+	};
+
 	cpus {
 		#address-cells = <2>;
 		#size-cells = <0>;

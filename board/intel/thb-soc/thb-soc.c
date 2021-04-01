@@ -40,6 +40,9 @@
 #define THB_TPM_KERNEL_PCR_INDEX                8
 
 #define SZ_8G                           0x200000000
+#define BUFF_LEN			6
+#define DRAM_SZ_LEN			10
+#define MRC_VER_LEN			5
 
 const char version_string[] = U_BOOT_VERSION_STRING CC_VERSION_STRING;
 
@@ -57,6 +60,9 @@ u8 slice_mem_map[SLICE_INDEX][MEM_INDEX] __attribute__ ((section(".data")));
 u8 slice[4] __attribute__ ((section(".data")));
 u8 thb_full __attribute__ ((section(".data")));
 u8 mem_id __attribute__ ((section(".data")));
+unsigned long long total_mem __attribute__ ((section(".data")));
+char fdt_mrc_version[MRC_VER_LEN]  __attribute__ ((section(".data")));
+char fdt_dram_sz[DRAM_SZ_LEN] __attribute__ ((section(".data")));
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -128,6 +134,55 @@ static const struct fdt_string_prop
 static platform_boot_intf_t boot_interface = MA_BOOT_INTF_EMMC;
 static uint8_t boot_mode __attribute__ ((section(".data")));
 static uint8_t soc_rev __attribute__ ((section(".data")));
+
+static void fdt_dram_mem(uint64_t size)
+{
+	unsigned long m = 0, n;
+	uint64_t f;
+	static const char names[] = {'E', 'P', 'T', 'G', 'M', 'K'};
+	unsigned long d = 10 * ARRAY_SIZE(names);
+	char c = 0;
+	unsigned int i;
+	char size_buf[BUFF_LEN];
+	char dec_size_buf[BUFF_LEN];
+
+	for (i = 0; i < ARRAY_SIZE(names); i++, d -= 10) {
+		if (size >> d) {
+			c = names[i];
+			break;
+		}
+	}
+
+	if (!c) {
+		snprintf(fdt_dram_sz, DRAM_SZ_LEN, "%llu Bytes", size);
+		return;
+	}
+
+	n = size >> d;
+	f = size & ((1ULL << d) - 1);
+
+	/* If there's a remainder, deal with it */
+	if (f) {
+		m = (10ULL * f + (1ULL << (d - 1))) >> d;
+
+		if (m >= 10) {
+			m -= 10;
+			n += 1;
+		}
+	}
+
+	snprintf(size_buf, BUFF_LEN, "%lu", n);
+
+	if (m) {
+		snprintf(dec_size_buf, BUFF_LEN, ".%ld", m);
+		snprintf(fdt_dram_sz, DRAM_SZ_LEN, "%s%s %cB", size_buf, dec_size_buf, c);
+		return;
+	}
+
+	snprintf(fdt_dram_sz, DRAM_SZ_LEN, "%s %cB", size_buf, c);
+
+	return;
+}
 
 static int fdt_create_node_and_populate(void *fdt, int nodeoffset,
 					const char *nodestring, u32 array_size,
@@ -373,6 +428,124 @@ static int fdt_thb_hddl_dev_fixup(void *fdt)
 	return 0;
 }
 
+static int fdt_thb_boot_info(void *fdt)
+{
+	int boot_info_off = 0;
+	int ret = 0;
+	char *fdt_boot_intf = NULL;
+	char *fdt_soc_rev = NULL;
+	char *fdt_boot_mode = NULL;
+	char *fdt_soc_cfg = NULL;
+	u8 mem_rank = 0;
+	u8 mem_density = 0;
+	char fdt_board_id[BUFF_LEN];
+	char fdt_mem_rank[BUFF_LEN];
+	char fdt_mem_density[BUFF_LEN];
+
+	boot_info_off =  fdt_path_offset(fdt, "/boot_info");
+	if (boot_info_off < 0) {
+		log_err("Failed to find boot_info node.\n");
+		return boot_info_off;
+	}
+
+	if (boot_interface == MA_BOOT_INTF_EMMC)
+		fdt_boot_intf = "eMMC";
+	else if (boot_interface == MA_BOOT_INTF_PCIE)
+		fdt_boot_intf = "PCIe";
+
+	if (!boot_mode)
+		fdt_boot_mode = "Open boot";
+	else
+		fdt_boot_mode = "Secure boot";
+
+	if (soc_rev == 0x00)
+		fdt_soc_rev = "THB(A0)";
+	else if (soc_rev == 0x01)
+		fdt_soc_rev = "THB(A1)";
+
+	if (thb_full)
+		fdt_soc_cfg = "All slices enabled";
+	else if (slice[0] & slice[2])
+		fdt_soc_cfg = "slice_0_2 enabled";
+	else if (slice[0] & slice[3])
+		fdt_soc_cfg = "slice_0_3 enabled";
+	else if (slice[1] & slice[2])
+		fdt_soc_cfg = "slice_1_2 enabled";
+	else if (slice[1] & slice[3])
+		fdt_soc_cfg = "slice_1_3 enabled";
+
+	mem_rank = mem_id &0x01;
+	mem_density = (mem_id >> 1) & 0x3;
+
+	snprintf(fdt_board_id, BUFF_LEN, "0x%02x", board_id);
+	snprintf(fdt_mem_rank, BUFF_LEN, "0x%02x", mem_rank);
+	snprintf(fdt_mem_density, BUFF_LEN, "0x%02x", mem_density);
+
+	fdt_dram_mem(total_mem);
+
+	ret = fdt_setprop_string(fdt, boot_info_off, "fw_date_time", U_BOOT_VERSION_STRING);
+	if (ret) {
+		log_err("Failed to update FW data and time stamp in boot_info node\n");
+		return ret;
+	}
+
+	ret = fdt_setprop_string(fdt, boot_info_off, "board_id", fdt_board_id);
+	if (ret) {
+		log_err("Failed to update board id in boot_info node\n");
+		return ret;
+	}
+
+	ret = fdt_setprop_string(fdt, boot_info_off, "boot_intf", fdt_boot_intf);
+	if (ret) {
+		log_err("Failed to update boot interface in boot_info node\n");
+		return ret;
+	}
+
+	ret = fdt_setprop_string(fdt, boot_info_off, "soc_rev", fdt_soc_rev);
+	if (ret) {
+		log_err("Failed to update soc revision in boot_info node\n");
+		return ret;
+	}
+
+	ret = fdt_setprop_string(fdt, boot_info_off, "boot_mode", fdt_boot_mode);
+	if (ret) {
+		log_err("Failed to update boot mode in boot_info node\n");
+		return ret;
+	}
+
+	ret = fdt_setprop_string(fdt, boot_info_off, "mrc_ver", fdt_mrc_version);
+	if (ret) {
+		log_err("Failed to update mrc version in boot_mode node\n");
+		return ret;
+	}
+
+	ret = fdt_setprop_string(fdt, boot_info_off, "mem_rank", fdt_mem_rank);
+	if (ret) {
+		log_err("Failed to update memory rank in boot_info node\n");
+		return ret;
+	}
+
+	ret = fdt_setprop_string(fdt, boot_info_off, "mem_density", fdt_mem_density);
+	if (ret) {
+		log_err("Failed to update memory density in boot_info node\n");
+		return ret;
+	}
+
+	ret = fdt_setprop_string(fdt, boot_info_off, "total_mem", fdt_dram_sz);
+	if (ret) {
+		log_err("Failed to update total memory in boot_info node\n");
+		return ret;
+	}
+
+	ret = fdt_setprop_string(fdt, boot_info_off, "soc_cfg", fdt_soc_cfg);
+	if (ret) {
+		log_err("Failed to update soc config in boot_info node\n");
+		return ret;
+	}
+
+	return 0;
+}
+
 /*
  * Add some board-specific data to the FDT before booting the
  * OS.
@@ -419,6 +592,11 @@ int ft_board_setup(void *fdt, struct bd_info *bd)
 	ret = fdt_thb_i2c_fixup(fdt);
 	if (ret < 0) {
 		log_err("Failed to update i2c-1 property\n");
+	}
+
+	ret = fdt_thb_boot_info(fdt);
+	if (ret < 0) {
+		return ret;
 	}
 
 	return 0;
@@ -1165,6 +1343,7 @@ phys_size_t get_effective_memsize(void)
 	boot_mode = plat_bl_ctx.boot_mode; /* Update here to avoid calling bl_ctx multiple times*/
 	board_id = plat_bl_ctx.board_id;
 	soc_rev = plat_bl_ctx.soc_rev;
+	memcpy(fdt_mrc_version, plat_bl_ctx.mrc_ver, MRC_VER_LEN);
 
 	if (board_id == BOARD_TYPE_CRB2F1)  /* For Flashless Boot Configuration */
 		board_type_crb2 = 1;
@@ -1222,6 +1401,8 @@ phys_size_t get_effective_memsize(void)
 
 	/* Total RAM Size */
 	gd->ram_size = (plat_bl_ctx.dram_mem * SZ_1G) - SECURE_DDR_SIZE - SHARED_DDR_SIZE;
+
+	total_mem = gd->ram_size;
 
 	return gd->ram_size;
 }

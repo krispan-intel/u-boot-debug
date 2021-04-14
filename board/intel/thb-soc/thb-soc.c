@@ -275,6 +275,58 @@ static int fdt_thb_smbus_fixup(void *fdt)
 }
 
 /*
+ * I2C0 is used as Master in evt2 board.
+ *
+ * I2C0 slave device node will be 'disabled' in dts file, however it will be
+ * "okay" for evt2 in fdt_thb_i2c0_fixup
+ */
+
+static int fdt_thb_i2c0_fixup(void *fdt)
+{
+	int i2c_dev_off = 0, node = 0;
+	int ret;
+
+	i2c_dev_off =  fdt_path_offset(fdt, "/soc/i2c@80490000");
+	if (i2c_dev_off < 0) {
+		log_err("Failed to find i2c0 node.\n");
+		return i2c_dev_off;
+	}
+
+	 /* BOARD_TYPE_HDDLF2 is for EVT2 */
+	if (BOARD_TYPE_HDDLF2 == board_id) {
+
+		fdt_for_each_subnode(node, fdt, i2c_dev_off) {
+			int len;
+			const char *node_name;
+
+			node_name = fdt_get_name(fdt, node, &len);
+			if (len < 0) {
+				log_err("unable to get node name.\n");
+				return len;
+			}
+			if (!strcmp(node_name, "adc081c@51")) {
+					ret = fdt_setprop_string(fdt, node, "status", "disabled");
+			}
+			if (thb_full) {
+				if (!strcmp(node_name, "pmic@47")) {
+					ret = fdt_setprop_string(fdt, node, "status", "okay");
+			}
+				if (!strcmp(node_name, "pmic@57")) {
+					ret = fdt_setprop_string(fdt, node, "status", "okay");
+			}
+			}
+			else {
+				if (!strcmp(node_name, "pmic@57")) {
+					ret = fdt_setprop_string(fdt, node, "status", "okay");
+			}
+			}
+		}
+	}
+
+	return 0;
+}
+
+/*
  * I2C1 is used as Master in evt2 board, however it is used as slave in
  * other board variants.
  *
@@ -306,7 +358,59 @@ static int fdt_thb_i2c_fixup(void *fdt)
 				return len;
 			}
 			if (!strcmp(node_name, "slave_device@5a")) {
+				ret = fdt_setprop_string(fdt, node, "reg", "0x00");
 				ret = fdt_setprop_string(fdt, node, "status", "disabled");
+			}
+			if (!strcmp(node_name, "fruram@50")) {
+                                ret = fdt_setprop_string(fdt, node, "status", "okay");
+			}
+			if (!strcmp(node_name, "tmp112@48")) {
+                                ret = fdt_setprop_string(fdt, node, "status", "okay");
+			}
+			if (!strcmp(node_name, "adc081c@18")) {
+			       ret = fdt_setprop_string(fdt, node, "status", "okay");
+			}
+			if (!strcmp(node_name, "pcal9575@20")) {
+	                       ret = fdt_setprop_string(fdt, node, "status", "okay");
+	                }
+		}
+	}
+
+	return 0;
+}
+
+/*
+ * I2C3 is used as Master in evt2 board.
+ *
+ * I2C3 slave device node will be 'disabled' in dts file, however it will be
+ * "okay" for evt2 in fdt_thb_i2c3_fixup
+ */
+
+static int fdt_thb_i2c3_fixup(void *fdt)
+{
+	int i2c_dev_off = 0, node = 0;
+	int ret;
+
+	i2c_dev_off =  fdt_path_offset(fdt, "/soc/i2c@804c0000");
+	if (i2c_dev_off < 0) {
+		log_err("Failed to find i2c3 node.\n");
+		return i2c_dev_off;
+	}
+
+	 /* BOARD_TYPE_HDDLF2 is for EVT2 */
+	if (BOARD_TYPE_HDDLF2 == board_id) {
+
+		fdt_for_each_subnode(node, fdt, i2c_dev_off) {
+			int len;
+			const char *node_name;
+
+			node_name = fdt_get_name(fdt, node, &len);
+			if (len < 0) {
+				log_err("unable to get node name.\n");
+				return len;
+			}
+			if (!strcmp(node_name, "pcisw@42")) {
+				ret = fdt_setprop_string(fdt, node, "status", "okay");
 			}
 		}
 	}
@@ -589,6 +693,11 @@ int ft_board_setup(void *fdt, struct bd_info *bd)
 		log_err("Failed to update smbus property\n");
 	}
 
+	ret = fdt_thb_i2c0_fixup(fdt);
+        if (ret < 0) {
+		log_err("Failed to update i2c-0 property\n");
+	}
+
 	ret = fdt_thb_i2c_fixup(fdt);
 	if (ret < 0) {
 		log_err("Failed to update i2c-1 property\n");
@@ -598,6 +707,12 @@ int ft_board_setup(void *fdt, struct bd_info *bd)
 	if (ret < 0) {
 		return ret;
 	}
+
+	ret = fdt_thb_i2c3_fixup(fdt);
+        if (ret < 0) {
+		log_err("Failed to update i2c-3 property\n");
+        }
+
 
 	return 0;
 }

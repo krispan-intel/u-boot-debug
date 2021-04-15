@@ -1,0 +1,3921 @@
+/*
+ * Device tree describing features common across Thunder Bay SoCs
+ *
+ * Copyright (c) 2018 Intel Corporation.
+ *
+ * SPDX-License-Identifier: GPL-2.0
+ *
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/clock/thunderbay-clocks.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/reset/thunderbay-reset.h>
+#include <dt-bindings/thermal/thermal.h>
+
+/* referred from include/linux/iommu.h */
+
+#define IOMMU_WRITE	2
+#define IOMMU_READ	1
+#define IOMMU_CACHE	4
+#define IOMMU_NOEXEC	8
+#define IOMMU_MMIO	16
+#define IOMMU_PRIV	32
+
+/* In CRB2 prime configurations,
+ * primary slice flag will be disabled by default to support rootfs mount.
+ * in such case, below flag is to enable some of the mandatory configurations
+ */
+#define CRB2_4GB_SLICE_0_SUBMODULE (0)
+#define CRB2_4GB_SLICE_1_SUBMODULE (0)
+
+/* For CRB2 prime configurations,
+ * Disable primary slice vpu memory allocation
+ */
+#if (CRB2_4GB_DISABLE_PRIMARY_SLICE)
+#if (THB_SLICE_0_EN)
+#undef THB_SLICE_0_EN
+#define THB_SLICE_0_EN 0
+#undef CRB2_4GB_SLICE_0_SUBMODULE
+#define CRB2_4GB_SLICE_0_SUBMODULE (1)
+#endif
+#if (THB_SLICE_1_EN)
+#undef THB_SLICE_1_EN
+#define THB_SLICE_1_EN 0
+#undef CRB2_4GB_SLICE_1_SUBMODULE
+#define CRB2_4GB_SLICE_1_SUBMODULE (1)
+#endif
+#endif
+
+/* Macro to define Kernel start address for Slice-1_2/1_3 configurations */
+#define SLICE_1_KERNEL_START_ADDR ((THB_SLICE_0_EN & THB_SLICE_1_EN & THB_SLICE_2_EN & THB_SLICE_3_EN)?(0x0):(0x0A000000))
+
+/* Macro to check THB-FULL/Prime config */
+
+#define THB_FULL_OR_PRIME ((THB_SLICE_0_EN & THB_SLICE_1_EN & THB_SLICE_2_EN & THB_SLICE_3_EN)?(0x1):(0x0))
+
+/* For THB default -> Enable all the slices
+ * For THB Prime -> Enable only required slices (0,2 or 0,3 or 1,2 or 1,3)
+ * Set as (1) - for slice-x enable */
+#ifndef THB_SLICE_0_EN
+#define THB_SLICE_0_EN (1)
+#endif
+
+#ifndef THB_SLICE_1_EN
+#define THB_SLICE_1_EN (1)
+#endif
+
+#ifndef THB_SLICE_2_EN
+#define THB_SLICE_2_EN (1)
+#endif
+
+#ifndef THB_SLICE_3_EN
+#define THB_SLICE_3_EN (1)
+#endif
+
+#define THB_DDR_4GB (0x00000001)
+#define THB_DDR_8GB (0x00000002)
+
+/* THB_DDR_CFG_4GB:4 bit value with bit 0 - 4  for slice 0 - 4. \
+ * Set 1 for DDR 4GB, Set as 0 for DDR 8GB
+ */
+#ifndef THB_DDR_CFG_4GB
+#define THB_DDR_CFG_4GB (0xF)
+#endif
+
+#define THB_DDR_SLICE0_SIZE_xGB ((THB_DDR_CFG_4GB & 0x1)?THB_DDR_4GB:THB_DDR_8GB)
+#define THB_DDR_SLICE1_SIZE_xGB ((THB_DDR_CFG_4GB & 0x2)?THB_DDR_4GB:THB_DDR_8GB)
+#define THB_DDR_SLICE2_SIZE_xGB ((THB_DDR_CFG_4GB & 0x4)?THB_DDR_4GB:THB_DDR_8GB)
+#define THB_DDR_SLICE3_SIZE_xGB ((THB_DDR_CFG_4GB & 0x8)?THB_DDR_4GB:THB_DDR_8GB)
+
+/* DMA address : upper 32bits needed by ARM eg: 0x10 81800000*/
+/* For THB-Prime, upper 32bits will be overwriteen by BL-build script
+ * Eg: THB Prime with slices 1,2 enabled
+ * Expected: THB_SLICE_1_UPPER32BITS_ADDR ((THB_DDR_CFG_4GB)?0x11:0x12)
+ * Actual  : THB_SLICE_1_UPPER32BITS_ADDR 0x10
+ * Expected: THB_SLICE_2_UPPER32BITS_ADDR ((THB_DDR_CFG_4GB)?0x12:0x14)
+ * Actual  : THB_SLICE_2_UPPER32BITS_ADDR ((THB_DDR_CFG_4GB)?0x11:0x12)
+ */
+#ifndef THB_SLICE_0_UPPER32BITS_ADDR
+#define THB_SLICE_0_UPPER32BITS_ADDR ((THB_DDR_CFG_4GB & 0x1)?0x10:0x11)
+#endif
+
+#ifndef THB_SLICE_1_UPPER32BITS_ADDR
+#define THB_SLICE_1_UPPER32BITS_ADDR ((THB_DDR_CFG_4GB & 0x2)?0x11:0x13)
+#endif
+
+#ifndef THB_SLICE_2_UPPER32BITS_ADDR
+#define THB_SLICE_2_UPPER32BITS_ADDR ((THB_DDR_CFG_4GB & 0x4)?0x12:0x15)
+#endif
+
+#ifndef THB_SLICE_3_UPPER32BITS_ADDR
+#define THB_SLICE_3_UPPER32BITS_ADDR ((THB_DDR_CFG_4GB & 0x8)?0x13:0x17)
+#endif
+
+/* THB_SYSMEM_SLICEx -> Slice memory to be used for sysmem
+ * set slice number (0-3) */
+
+#ifdef THB_SLICE_0_EN
+#define THB_SYSMEM_SLICE0 (THB_SLICE_0_EN?0:0xF)
+#endif
+
+#ifdef THB_SLICE_1_EN
+#define THB_SYSMEM_SLICE1 (THB_SLICE_1_EN?1:0)
+#endif
+
+#ifdef THB_SLICE_2_EN
+#define THB_SYSMEM_SLICE2 (THB_SLICE_2_EN?2:0)
+#endif
+
+#ifdef THB_SLICE_3_EN
+#define THB_SYSMEM_SLICE3 (THB_SLICE_3_EN?3:0)
+#endif
+
+#ifdef THB_SLICE_0_EN
+#define THB_OCSMASK_SLICE0 (THB_SLICE_0_EN?0x2:0)
+#endif
+
+#ifdef THB_SLICE_1_EN
+#define THB_OCSMASK_SLICE1 (THB_SLICE_1_EN?0x4:0)
+#endif
+
+#ifdef THB_SLICE_2_EN
+#define THB_OCSMASK_SLICE2 (THB_SLICE_2_EN?0x8:0)
+#endif
+
+#ifdef THB_SLICE_3_EN
+#define THB_OCSMASK_SLICE3 (THB_SLICE_3_EN?0x10:0)
+#endif
+
+#define THB_SYSMEM_SLICEx_UPPER32BITS_ADDR \
+((THB_SYSMEM_SLICE0==0)?THB_SLICE_0_UPPER32BITS_ADDR: \
+(THB_SYSMEM_SLICE1==1)?THB_SLICE_1_UPPER32BITS_ADDR: \
+(THB_SYSMEM_SLICE2==2)?THB_SLICE_2_UPPER32BITS_ADDR: \
+(THB_SYSMEM_SLICE3==3)?THB_SLICE_3_UPPER32BITS_ADDR:THB_SLICE_0_UPPER32BITS_ADDR)
+
+/ {
+	compatible = "intel,thunderbay";
+	interrupt-parent = <&gic>;
+
+	ftpm {
+		compatible = "microsoft,ftpm";
+	};
+
+	cpus {
+		#address-cells = <2>;
+		#size-cells = <0>;
+
+		cpu-map {
+			cluster0 {
+				core0 {
+					cpu = <&CPU0>;
+				};
+				core1 {
+					cpu = <&CPU1>;
+				};
+				core2 {
+					cpu = <&CPU2>;
+				};
+				core3 {
+					cpu = <&CPU3>;
+				};
+			};
+			cluster1 {
+				core0 {
+					cpu = <&CPU4>;
+				};
+				core1 {
+					cpu = <&CPU5>;
+				};
+				core2 {
+					cpu = <&CPU6>;
+				};
+				core3 {
+					cpu = <&CPU7>;
+				};
+			};
+			cluster2 {
+				core0 {
+					cpu = <&CPU8>;
+				};
+				core1 {
+					cpu = <&CPU9>;
+				};
+				core2 {
+					cpu = <&CPU10>;
+				};
+				core3 {
+					cpu = <&CPU11>;
+				};
+			};
+			cluster3 {
+				core0 {
+					cpu = <&CPU12>;
+				};
+				core1 {
+					cpu = <&CPU13>;
+				};
+				core2 {
+					cpu = <&CPU14>;
+				};
+				core3 {
+					cpu = <&CPU15>;
+				};
+			};
+		};
+
+		CPU0: cpu@0 {
+			compatible = "arm,cortex-a53";
+			device_type = "cpu";
+			reg = <0x0 0x0>;
+			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_0_0>;
+			clocks = <&scmi_dvfs 0x0>;
+			#cooling-cells = <2>;
+		};
+
+		CPU1: cpu@1 {
+			compatible = "arm,cortex-a53";
+			device_type = "cpu";
+			reg = <0x0 0x1>;
+			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_0_1>;
+			clocks = <&scmi_dvfs 0x0>;
+			#cooling-cells = <2>;
+		};
+
+		CPU2: cpu@2 {
+			compatible = "arm,cortex-a53";
+			device_type = "cpu";
+			reg = <0x0 0x2>;
+			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_0_2>;
+			clocks = <&scmi_dvfs 0x0>;
+			#cooling-cells = <2>;
+		};
+
+		CPU3: cpu@3 {
+			compatible = "arm,cortex-a53";
+			device_type = "cpu";
+			reg = <0x0 0x3>;
+			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_0_3>;
+			clocks = <&scmi_dvfs 0x0>;
+			#cooling-cells = <2>;
+		};
+
+		CPU4: cpu@100 {
+			compatible = "arm,cortex-a53";
+			device_type = "cpu";
+			reg = <0x0 0x100>;
+			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_1_0>;
+			clocks = <&scmi_dvfs 0x1>;
+			#cooling-cells = <2>;
+		};
+
+		CPU5: cpu@101 {
+			compatible = "arm,cortex-a53";
+			device_type = "cpu";
+			reg = <0x0 0x101>;
+			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_1_1>;
+			clocks = <&scmi_dvfs 0x1>;
+			#cooling-cells = <2>;
+		};
+
+		CPU6: cpu@102 {
+			compatible = "arm,cortex-a53";
+			device_type = "cpu";
+			reg = <0x0 0x102>;
+			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_1_2>;
+			clocks = <&scmi_dvfs 0x1>;
+			#cooling-cells = <2>;
+		};
+
+		CPU7: cpu@103 {
+			compatible = "arm,cortex-a53";
+			device_type = "cpu";
+			reg = <0x0 0x103>;
+			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_1_3>;
+			clocks = <&scmi_dvfs 0x1>;
+			#cooling-cells = <2>;
+		};
+
+		CPU8: cpu@200 {
+			compatible = "arm,cortex-a53";
+			device_type = "cpu";
+			reg = <0x0 0x200>;
+			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_2_0>;
+			clocks = <&scmi_dvfs 0x2>;
+			#cooling-cells = <2>;
+		};
+
+		CPU9: cpu@201 {
+			compatible = "arm,cortex-a53";
+			device_type = "cpu";
+			reg = <0x0 0x201>;
+			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_2_1>;
+			clocks = <&scmi_dvfs 0x2>;
+			#cooling-cells = <2>;
+		};
+
+		CPU10: cpu@202 {
+			compatible = "arm,cortex-a53";
+			device_type = "cpu";
+			reg = <0x0 0x202>;
+			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_2_2>;
+			clocks = <&scmi_dvfs 0x2>;
+			#cooling-cells = <2>;
+		};
+
+		CPU11: cpu@203 {
+			compatible = "arm,cortex-a53";
+			device_type = "cpu";
+			reg = <0x0 0x203>;
+			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_2_3>;
+			clocks = <&scmi_dvfs 0x2>;
+			#cooling-cells = <2>;
+		};
+
+		CPU12: cpu@300 {
+			compatible = "arm,cortex-a53";
+			device_type = "cpu";
+			reg = <0x0 0x300>;
+			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_3_0>;
+			clocks = <&scmi_dvfs 0x3>;
+			#cooling-cells = <2>;
+		};
+
+		CPU13: cpu@301 {
+			compatible = "arm,cortex-a53";
+			device_type = "cpu";
+			reg = <0x0 0x301>;
+			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_3_1>;
+			clocks = <&scmi_dvfs 0x3>;
+			#cooling-cells = <2>;
+		};
+
+		CPU14: cpu@302 {
+			compatible = "arm,cortex-a53";
+			device_type = "cpu";
+			reg = <0x0 0x302>;
+			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_3_2>;
+			clocks = <&scmi_dvfs 0x3>;
+			#cooling-cells = <2>;
+		};
+
+		CPU15: cpu@303 {
+			compatible = "arm,cortex-a53";
+			device_type = "cpu";
+			reg = <0x0 0x303>;
+			enable-method = "psci";
+			cpu-idle-states = <&CPU_SLEEP_3_3>;
+			clocks = <&scmi_dvfs 0x3>;
+			#cooling-cells = <2>;
+		};
+	};
+
+	idle-states {
+		entry-method = "psci";
+		  CPU_SLEEP_0_0: cpu-sleep-0-0 {
+			compatible = "arm,idle-state";
+			/*local-timer-stop;*/
+			arm,psci-suspend-param = <0x0000000>;
+			entry-latency-us = <100>;
+			exit-latency-us = <50>;
+			min-residency-us = <200>;
+			wakeup-latency-us = <150>;
+		};
+		CPU_SLEEP_0_1: cpu-sleep-0-1 {
+			compatible = "arm,idle-state";
+			/*local-timer-stop;*/
+			arm,psci-suspend-param = <0x0000000>;
+			entry-latency-us = <100>;
+			exit-latency-us = <250>;
+			min-residency-us = <2000>;
+			wakeup-latency-us = <600>;
+		};
+		CPU_SLEEP_0_2: cpu-sleep-0-2 {
+			compatible = "arm,idle-state";
+			/*local-timer-stop;*/
+			arm,psci-suspend-param = <0x0000000>;
+			entry-latency-us = <100>;
+			exit-latency-us = <250>;
+			min-residency-us = <2000>;
+			wakeup-latency-us = <600>;
+		};
+		CPU_SLEEP_0_3: cpu-sleep-0-3 {
+			compatible = "arm,idle-state";
+			/*local-timer-stop;*/
+			arm,psci-suspend-param = <0x0000000>;
+			entry-latency-us = <100>;
+			exit-latency-us = <250>;
+			min-residency-us = <2000>;
+			wakeup-latency-us = <600>;
+		};
+		CPU_SLEEP_1_0: cpu-sleep-1-0 {
+			compatible = "arm,idle-state";
+			/*local-timer-stop;*/
+			arm,psci-suspend-param = <0x0000000>;
+			entry-latency-us = <100>;
+			exit-latency-us = <250>;
+			min-residency-us = <2000>;
+			wakeup-latency-us = <600>;
+		};
+		CPU_SLEEP_1_1: cpu-sleep-1-1 {
+			compatible = "arm,idle-state";
+			/*local-timer-stop;*/
+			arm,psci-suspend-param = <0x0000000>;
+			entry-latency-us = <100>;
+			exit-latency-us = <250>;
+			min-residency-us = <2000>;
+			wakeup-latency-us = <600>;
+		};
+		CPU_SLEEP_1_2: cpu-sleep-1-2 {
+			compatible = "arm,idle-state";
+			/*local-timer-stop;*/
+			arm,psci-suspend-param = <0x0000000>;
+			entry-latency-us = <100>;
+			exit-latency-us = <250>;
+			min-residency-us = <2000>;
+			wakeup-latency-us = <600>;
+		};
+		CPU_SLEEP_1_3: cpu-sleep-1-3 {
+			compatible = "arm,idle-state";
+			/*local-timer-stop;*/
+			arm,psci-suspend-param = <0x0000000>;
+			entry-latency-us = <100>;
+			exit-latency-us = <250>;
+			min-residency-us = <2000>;
+			wakeup-latency-us = <600>;
+		};
+		CPU_SLEEP_2_0: cpu-sleep-2-0 {
+			compatible = "arm,idle-state";
+			/*local-timer-stop;*/
+			arm,psci-suspend-param = <0x0000000>;
+			entry-latency-us = <100>;
+			exit-latency-us = <250>;
+			min-residency-us = <2000>;
+			wakeup-latency-us = <600>;
+		};
+		CPU_SLEEP_2_1: cpu-sleep-2-1 {
+			compatible = "arm,idle-state";
+			/*local-timer-stop;*/
+			arm,psci-suspend-param = <0x0000000>;
+			entry-latency-us = <100>;
+			exit-latency-us = <250>;
+			min-residency-us = <2000>;
+			wakeup-latency-us = <600>;
+		};
+		CPU_SLEEP_2_2: cpu-sleep-2-2 {
+			compatible = "arm,idle-state";
+			/*local-timer-stop;*/
+			arm,psci-suspend-param = <0x0000000>;
+			entry-latency-us = <100>;
+			exit-latency-us = <250>;
+			min-residency-us = <2000>;
+			wakeup-latency-us = <600>;
+		};
+		CPU_SLEEP_2_3: cpu-sleep-2-3 {
+			compatible = "arm,idle-state";
+			/*local-timer-stop;*/
+			arm,psci-suspend-param = <0x0000000>;
+			entry-latency-us = <100>;
+			exit-latency-us = <250>;
+			min-residency-us = <2000>;
+			wakeup-latency-us = <600>;
+		};
+		CPU_SLEEP_3_0: cpu-sleep-3-0 {
+			compatible = "arm,idle-state";
+			/*local-timer-stop;*/
+			arm,psci-suspend-param = <0x0000000>;
+			entry-latency-us = <100>;
+			exit-latency-us = <250>;
+			min-residency-us = <2000>;
+			wakeup-latency-us = <600>;
+		};
+		CPU_SLEEP_3_1: cpu-sleep-3-1 {
+			compatible = "arm,idle-state";
+			/*local-timer-stop;*/
+			arm,psci-suspend-param = <0x0000000>;
+			entry-latency-us = <100>;
+			exit-latency-us = <250>;
+			min-residency-us = <2000>;
+			wakeup-latency-us = <600>;
+		};
+		CPU_SLEEP_3_2: cpu-sleep-3-2 {
+			compatible = "arm,idle-state";
+			/*local-timer-stop;*/
+			arm,psci-suspend-param = <0x0000000>;
+			entry-latency-us = <100>;
+			exit-latency-us = <250>;
+			min-residency-us = <2000>;
+			wakeup-latency-us = <600>;
+		};
+		CPU_SLEEP_3_3: cpu-sleep-3-3 {
+			compatible = "arm,idle-state";
+			/*local-timer-stop;*/
+			arm,psci-suspend-param = <0x0000000>;
+			entry-latency-us = <100>;
+			exit-latency-us = <250>;
+			min-residency-us = <2000>;
+			wakeup-latency-us = <600>;
+		};
+	};
+
+	psci {
+		compatible = "arm,psci-0.2";
+		method = "smc";
+	};
+
+	firmware {
+		optee {
+			compatible = "linaro,optee-tz";
+			method = "smc";
+		};
+		sdei {
+			compatible = "arm,sdei-1.0";
+			method = "smc";
+		};
+
+		scmi: scmi {
+			compatible = "arm,scmi";
+			mboxes = <&scmi_mailbox 0>;
+			shmem = <&scmi_sec_shmem>;
+			mbox-names = "tx";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			u-boot,dm-pre-reloc;
+
+			scmi_devpd: protocol@11 {
+				reg = <0x11>;
+				#power-domain-cells = <1>;
+			};
+
+			scmi_dvfs: protocol@13 {
+				reg = <0x13>;
+				#clock-cells = <1>;
+			};
+
+			scmi_clk: protocol@14 {
+				reg = <0x14>;
+				#clock-cells = <1>;
+			};
+		};
+
+	};
+
+	scmi_mailbox: scmi_mailbox {
+		compatible = "intel,keembay-scmi-mailbox";
+		#mbox-cells = <1>;
+		memory-region = <&scmi_sec_shmem>;
+		u-boot,dm-pre-reloc;
+	};
+
+	aliases {
+		ethernet0 = &gmac0;
+		ethernet1 = &gmac1;
+	};
+
+	gic: interrupt-controller@88400000 {
+		compatible = "arm,gic-v3";
+		interrupt-controller;
+		#interrupt-cells = <3>;
+		reg = <0x0 0x88400000 0x0 0x200000>,	/* GICD */
+		      <0x0 0x88600000 0x0 0x200000>;	/* GICR */
+		/* VGIC maintenance interrupt */
+		interrupts = <GIC_PPI 9 IRQ_TYPE_LEVEL_HIGH>;
+	};
+
+	timer {
+		compatible = "arm,armv8-timer";
+		/* Secure, non-secure, virtual, and hypervisor */
+		interrupts = <GIC_PPI 13 IRQ_TYPE_LEVEL_HIGH>,
+		             <GIC_PPI 14 IRQ_TYPE_LEVEL_HIGH>,
+		             <GIC_PPI 11 IRQ_TYPE_LEVEL_HIGH>,
+		             <GIC_PPI 10 IRQ_TYPE_LEVEL_HIGH>;
+	};
+
+	pmu {
+		compatible = "arm,armv8-pmuv3";
+		interrupts = <GIC_PPI 0x7 IRQ_TYPE_LEVEL_HIGH>;
+	};
+
+	ecdsa_engine: ecdsa_engine {
+		compatible = "intel,keembay-ecdsa";
+	};
+
+	xmss_engine: xmss_engine {
+		compatible = "intel,keembay-xmss";
+	};
+
+	rst_cpuss: reset-controller@88830040 {
+		compatible = "intel,thunderbay-cpuss-rst";
+		reg = <0x0 0x88830040 0x0 0x10>;
+		#reset-cells = <1>;
+	};
+
+	rst_pss1: reset-controller@80430000 {
+		compatible = "intel,thunderbay-pss-rst1";
+		reg = <0x0 0x80430000 0x0 0x10404>;
+		#reset-cells = <1>;
+	};
+
+	rst_pss2: reset-controller@80441000 {
+		compatible = "intel,thunderbay-pss-rst2";
+		reg = <0x0 0x80441000 0x0 0xE004>;
+		#reset-cells = <1>;
+	};
+
+	rst_pcie: reset-controller@82800000 {
+		compatible = "intel,thunderbay-pcie-rst";
+		reg = <0x0 0x82800000 0x0 0x10>;
+		#reset-cells = <1>;
+	};
+
+	rst_comss0: reset-controller@185520000 {
+		compatible = "intel,thunderbay-comss-rst";
+		reg = <0x1 0x85520000 0x0 0x1010>;
+		#reset-cells = <1>;
+	};
+
+	rst_comss1: reset-controller@285520000 {
+		compatible = "intel,thunderbay-comss-rst";
+		reg = <0x2 0x85520000 0x0 0x1010>;
+		#reset-cells = <1>;
+	};
+
+	rst_comss2: reset-controller@385520000 {
+		compatible = "intel,thunderbay-comss-rst";
+		reg = <0x3 0x85520000 0x0 0x1010>;
+		#reset-cells = <1>;
+	};
+
+	rst_comss3: reset-controller@485520000 {
+		compatible = "intel,thunderbay-comss-rst";
+		reg = <0x4 0x85520000 0x0 0x1010>;
+		#reset-cells = <1>;
+	};
+
+	rst_memss0_0: reset-controller@184400000 {
+		compatible = "intel,thunderbay-memss-rst";
+		reg = <0x1 0x84400000 0x0 0x30>;
+		#reset-cells = <1>;
+	};
+
+	rst_memss0_1: reset-controller@184410000 {
+		compatible = "intel,thunderbay-memss-rst";
+		reg = <0x1 0x84410000 0x0 0x30>;
+		#reset-cells = <1>;
+	};
+
+	rst_memss1_0: reset-controller@284400000 {
+		compatible = "intel,thunderbay-memss-rst";
+		reg = <0x2 0x84400000 0x0 0x30>;
+		#reset-cells = <1>;
+	};
+
+	rst_memss1_1: reset-controller@284410000 {
+		compatible = "intel,thunderbay-memss-rst";
+		reg = <0x2 0x84410000 0x0 0x30>;
+		#reset-cells = <1>;
+	};
+
+	rst_memss2_0: reset-controller@384400000 {
+		compatible = "intel,thunderbay-memss-rst";
+		reg = <0x3 0x84400000 0x0 0x30>;
+		#reset-cells = <1>;
+	};
+
+	rst_memss2_1: reset-controller@384410000 {
+		compatible = "intel,thunderbay-memss-rst";
+		reg = <0x3 0x84410000 0x0 0x30>;
+		#reset-cells = <1>;
+	};
+
+	rst_memss3_0: reset-controller@484400000 {
+		compatible = "intel,thunderbay-memss-rst";
+		reg = <0x4 0x84400000 0x0 0x30>;
+		#reset-cells = <1>;
+	};
+
+	rst_memss3_1: reset-controller@484410000 {
+		compatible = "intel,thunderbay-memss-rst";
+		reg = <0x4 0x84410000 0x0 0x30>;
+		#reset-cells = <1>;
+	};
+
+	
+
+	soc {
+		compatible = "simple-bus";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+		dma-ranges;
+
+		gpt_wdt: watchdog@8880a09c {
+			compatible = "intel,thunderbay-wdt";
+			reg = <0x0 0x8880a09c 0x0 0xf>;
+			interrupts = <GIC_SPI 1 IRQ_TYPE_LEVEL_HIGH>,
+			             <GIC_SPI 2 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "threshold","timeout";
+			clocks = <&scmi_clk TIMER_WDT_XTAL_CLK>;
+			status = "okay";
+		};
+
+		gpt_cntr: counter@8880a0e8 {
+			compatible = "intel,thunderbay-counter";
+			reg = <0x0 0x8880A0E8 0x0 0x8>;
+			clocks = <&fixed_rate_emu_10mhz>;
+/*			clocks = <&scmi_clk TIMER_CLK>; */
+			status = "okay";
+		};
+
+		gpt2: timer@8880a030 {
+			compatible = "intel,thunderbay-timer";
+			reg = <0x0 0x8880a030 0x0 0x10>;
+			interrupts = <GIC_SPI 16 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&fixed_rate_emu_10mhz>;
+/*			clocks = <&scmi_clk TIMER_CLK>; */
+			status = "okay";
+		};
+
+		gpt3: timer@8880a040 {
+			compatible = "intel,thunderbay-timer";
+			reg = <0x0 0x8880a040 0x0 0x10>;
+			interrupts = <GIC_SPI 17 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&fixed_rate_emu_10mhz>;
+/*			clocks = <&scmi_clk TIMER_CLK>; */
+			status = "okay";
+		};
+
+		gpt4: timer@8880a050 {
+			compatible = "intel,thunderbay-timer";
+			reg = <0x0 0x8880a050 0x0 0x10>;
+			interrupts = <GIC_SPI 18 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&fixed_rate_emu_10mhz>;
+/*			clocks = <&scmi_clk TIMER_CLK>; */
+			status = "okay";
+		};
+
+		gpt5: timer@8880a060 {
+			compatible = "intel,thunderbay-timer";
+			reg = <0x0 0x8880a060 0x0 0x10>;
+			interrupts = <GIC_SPI 19 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&fixed_rate_emu_10mhz>;
+/*			clocks = <&scmi_clk TIMER_CLK>; */
+			status = "okay";
+		};
+
+		gpt6: timer@8880a070 {
+			compatible = "intel,thunderbay-timer";
+			reg = <0x0 0x8880a070 0x0 0x10>;
+			interrupts = <GIC_SPI 20 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&fixed_rate_emu_10mhz>;
+/*			clocks = <&scmi_clk TIMER_CLK>; */
+			status = "okay";
+		};
+
+		gpt7: timer@8880a080 {
+			compatible = "intel,thunderbay-timer";
+			reg = <0x0 0x8880a080 0x0 0x10>;
+			interrupts = <GIC_SPI 21 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&fixed_rate_emu_10mhz>;
+/*			clocks = <&scmi_clk TIMER_CLK>; */
+			status = "okay";
+		};
+
+		emmc_phy: mmc_phy@80440800 {
+			#phy-cells = <0>;
+			compatible = "intel,thunderbay-emmc-phy";
+			status = "disabled";
+			reg = <0x0 0x80440800 0x0 0x100>;
+			clocks = <&mmc>;
+			clock-names = "emmcclk";
+			//intel,thunderbay-emmc-phy-ren = <0x0>;
+			//intel,thunderbay-emmc-phy-otap-dly = <0x26>;
+			//intel,thunderbay-emmc-phy-itap-dly = <0x0>;
+			//intel,thunderbay-emmc-phy-sel-strb = <0x5>;
+		};
+
+		mmc: mmc@80420000 {
+			compatible = "intel,thunderbay-sdhci-5.1", "arasan,sdhci-5.1";
+			//compatible = "arasan,sdhci-4.9a";
+			status = "disabled";
+			interrupts = <GIC_SPI 714 IRQ_TYPE_LEVEL_HIGH>;
+			reg = <0x0 0x80420000 0x0 0x400>;
+			clocks = <&scmi_clk EMMC_XIN_CLK>,
+			         <&scmi_clk EMMC_AXI_CLK>;
+			clock-names = "clk_xin", "clk_ahb";
+			phys = <&emmc_phy>;
+			phy-names = "phy_arasan";
+			assigned-clocks = <&scmi_clk EMMC_XIN_CLK>;
+			clock-output-names = "emmc_cardclock";
+			resets = <&rst_pss1 TBH_PSS_EMMC_RST_N>;
+			#clock-cells = <0x0>;
+			mmc-hs200-1_8v;
+                        //sd-uhs-sdr25;
+			supports-cqe;
+			bus-width = <0x8>;
+		};
+
+		uart0: serial@80460000 {
+			compatible = "snps,dw-apb-uart";
+			reg = <0x0 0x80460000 0x0 0x100>;
+			interrupts = <GIC_SPI 725 IRQ_TYPE_LEVEL_HIGH>;
+			clock-frequency = <50000000>;
+			/*clocks = <&scmi_clk UART_0_SCLK>,
+			         <&scmi_clk UART_0_CLK>; */
+			clock-names = "baudclk", "apb_pclk";
+			resets = <&rst_pss1 TBH_PSS_UART_INST_0_RST_N>;
+			reg-shift = <2>;
+			reg-io-width = <4>;
+			status = "disabled";
+		};
+
+		uart1: serial@80470000 {
+			compatible = "snps,dw-apb-uart";
+			reg = <0x0 0x80470000 0x0 0x100>;
+			interrupts = <GIC_SPI 724 IRQ_TYPE_LEVEL_HIGH>;
+			clock-frequency = <50000000>;
+			/*clocks = <&scmi_clk UART_1_SCLK>,
+			         <&scmi_clk UART_1_CLK>;
+			clock-names = "baudclk", "apb_pclk"; */
+			resets = <&rst_pss1 TBH_PSS_UART_INST_1_RST_N>;
+			reg-shift = <2>;
+			reg-io-width = <4>;
+			status = "disabled";
+		};
+
+		i2c0: i2c@80490000 {
+			compatible = "snps,designware-i2c";
+			reg = <0x0 0x80490000 0x0 0x100>;
+			interrupts = <GIC_SPI 723 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk I2C_0_IC_CLK>,
+			         <&scmi_clk I2C_0_P_CLK>;
+			clock-names = "ic_clk", "pclk";
+			i2c-sda-hold-time-ns = <300>;
+			i2c-fast-plus-hcnt = <0x51>;
+			i2c-fast-plus-lcnt = <0x60>;
+			resets = <&rst_pss1 TBH_PSS_I2C_INST_0_RST_N>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			adc081c@51 {
+                                compatible = "adc081c";
+                                reg = <0x51>;
+                                status = "okay";
+                        };
+
+			pmic@57 {
+				compatible = "OO";
+				reg = <0x57>;
+				status = "disabled";
+			};
+			pmic@47 {
+				compatible = "OO";
+				reg = <0x47>;
+				status = "disabled";
+			};
+
+		};
+
+		i2c1: i2c@804a0000 {
+			compatible = "snps,designware-i2c";
+			reg = <0x0 0x804a0000 0x0 0x100>;
+			interrupts = <GIC_SPI 722 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk I2C_1_IC_CLK>,
+			         <&scmi_clk I2C_1_P_CLK>;
+			clock-names = "ic_clk", "pclk";
+			i2c-sda-hold-time-ns = <300>;
+			i2c-fast-plus-hcnt = <0x51>;
+			i2c-fast-plus-lcnt = <0x60>;
+			resets = <&rst_pss1 TBH_PSS_I2C_INST_1_RST_N>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+			
+			slave_device@5a {
+				compatible = "slave-kmb-tj";
+				reg = <0x4000005a>;
+				status = "okay";
+                       };
+			fruram@50 {
+				compatible = "OO";
+				reg = <0x50>;
+				status = "disabled";
+			};
+
+			emc2103@2e {
+				compatible = "emc2103";
+				reg = <0x2e>;
+				status = "disabled";
+			};
+
+			tmp112@48 {
+				compatible = "tmp112";
+				reg = <0x48>;
+				status = "disabled";
+			};
+
+			adc081c@18 {
+				compatible = "adc081c";
+				reg = <0x18>;
+				status = "disabled";
+			};
+
+			pcal9575@20 {
+				compatible = "9575";
+				reg = <0x20>;
+				status = "disabled";
+			};
+
+		};
+
+		i2c2: i2c@804b0000 {
+			compatible = "snps,designware-i2c";
+			reg = <0x0 0x804b0000 0x0 0x100>;
+			interrupts = <GIC_SPI 721 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk I2C_2_IC_CLK>,
+			         <&scmi_clk I2C_2_P_CLK>;
+			clock-names = "ic_clk", "pclk";
+			i2c-sda-hold-time-ns = <300>;
+			i2c-fast-plus-hcnt = <0x51>;
+			i2c-fast-plus-lcnt = <0x60>;
+			resets = <&rst_pss1 TBH_PSS_I2C_INST_2_RST_N>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+		};
+
+		i2c3: i2c@804c0000 {
+			compatible = "snps,designware-i2c";
+			reg = <0x0 0x804c0000 0x0 0x100>;
+			interrupts = <GIC_SPI 720 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk I2C_3_IC_CLK>,
+			         <&scmi_clk I2C_3_P_CLK>;
+			clock-names = "ic_clk", "pclk";
+			i2c-sda-hold-time-ns = <300>;
+			i2c-fast-plus-hcnt = <0x51>;
+			i2c-fast-plus-lcnt = <0x60>;
+			resets = <&rst_pss1 TBH_PSS_I2C_INST_3_RST_N>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			rtc@6F {
+				compatible = "microchip,mcp7940x";
+				reg = <0x6f>;
+			};
+			pcisw@42 {
+				compatible = "OO";
+				reg = <0x42>;
+				status = "disabled";
+			};
+
+		};
+
+		i2c4: i2c@804d0000 {
+			compatible = "snps,designware-i2c";
+			reg = <0x0 0x804d0000 0x0 0x100>;
+			interrupts = <GIC_SPI 719 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk I2C_4_IC_CLK>,
+			         <&scmi_clk I2C_4_P_CLK>;
+			clock-names = "ic_clk", "pclk";
+			i2c-sda-hold-time-ns = <300>;
+			i2c-fast-plus-hcnt = <0x51>;
+			i2c-fast-plus-lcnt = <0x60>;
+			resets = <&rst_pss1 TBH_PSS_I2C_INST_4_RST_N>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		smbus: smbus@80480000 {
+			compatible = "snps,designware-i2c";
+			reg = <0x0 0x80480000 0x0 0x100>;
+			interrupts = <0x0 0x2CE 0x4>;
+			clocks = <0x26 0x237 0x26 0xf0>;
+			clock-names = "ic_clk", "pclk";
+			clock-frequency = <0x186A0>;
+			i2c-sda-hold-time-ns = <0x12c>;
+			i2c-fast-plus-hcnt = <0x51>;
+			i2c-fast-plus-lcnt = <0x60>;
+			resets = <0x2b 0x3>;
+			#address-cells = <0x1>;
+			#size-cells = <0x0>;
+			status = "disabled";
+
+			slave_device {
+				compatible = "slave-24c02";
+				reg = <0x4000005a>;
+				status = "okay";
+			};
+		};
+
+		spi0: spi@80520000 {
+			compatible = "snps,dw-ahb-ssi";
+			reg = <0x0 0x80520000 0x0 0x100>;
+			interrupts = <GIC_SPI 727 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk SSI_0_S_CLK>;
+			resets = <&rst_pss2 TBH_PSS_SSI_INST_0_RST_N>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		spi1: spi@80530000 {
+			compatible = "snps,dw-ahb-ssi";
+			reg = <0x0 0x80530000 0x0 0x100>;
+			clocks = <&scmi_clk SSI_1_S_CLK>;
+			interrupts = <GIC_SPI 726 IRQ_TYPE_LEVEL_HIGH>;
+			resets = <&rst_pss2 TBH_PSS_SSI_INST_1_RST_N>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+		};
+
+             ecc_cpu: ecc@88811000 {
+                        compatible = "intel,keembay-ocs-ecc";
+                        reg = <0x0 0x88811000 0x0 0x1000>;
+                        interrupts = <GIC_SPI 4 IRQ_TYPE_LEVEL_HIGH>;
+			driver-name = "thunderbay-ocs_cpu";
+			priority = <350>; 
+                        status = "okay";
+		};
+
+	/*	ecc0: ecc@185501000 {
+                        compatible = "intel,keembay-ocs-ecc";
+                        reg = <0x0 0x185501000 0x0 0x1000>;
+                        interrupts = <GIC_SPI 676 IRQ_TYPE_LEVEL_HIGH>;
+                        driver-name = "thunderbay-ocs_0";
+                        priority = <340>;
+                        status = "okay";
+                };
+
+		ecc1: ecc@285501000 {
+                        compatible = "intel,keembay-ocs-ecc";
+                        reg = <0x0 0x285501000 0x0 0x1000>;
+                        interrupts = <GIC_SPI 672 IRQ_TYPE_LEVEL_HIGH>;
+                        driver-name = "thunderbay-ocs_1";
+                        priority = <340>;
+                        status = "okay";
+                };
+
+		ecc2: ecc@385501000 {
+                        compatible = "intel,keembay-ocs-ecc";
+                        reg = <0x0 0x385501000 0x0 0x1000>;
+                        interrupts = <GIC_SPI 668 IRQ_TYPE_LEVEL_HIGH>;
+                        driver-name = "thunderbay-ocs_2";
+                        priority = <340>;
+                        status = "okay";
+		};
+
+                ecc3: ecc@485501000 {
+                        compatible = "intel,keembay-ocs-ecc";
+                        reg = <0x0 0x485501000 0x0 0x1000>;
+                        interrupts = <GIC_SPI 664 IRQ_TYPE_LEVEL_HIGH>;
+                        driver-name = "thunderbay-ocs_3";
+                        priority = <340>;
+                        status = "okay";
+                };
+	*/
+
+                aes_cpu: aes@88818000 {
+                        compatible = "intel,keembay-ocs-aes";
+                        reg = <0x0 0x88818000 0x0 0x1000
+                               0x0 0x88820000 0x0 0x8>;
+                        reg-names = "ocs_base", "ocs_wrapper_base";
+                        interrupts = <GIC_SPI 3 IRQ_TYPE_LEVEL_HIGH>;
+                        driver-name = "thunderbay-ocs_cpu";
+                        priority = <350>;
+                        resets = <&rst_cpuss TBH_CPUSS_OCS_RST>;
+                        status = "okay";
+                };
+
+#if (THB_SLICE_0_EN)
+                aes0: aes@185508000 {
+                        compatible = "intel,keembay-ocs-aes";
+                        reg = <0x1 0x85508000 0x0 0x1000
+                               0x1 0x85510000 0x0 0x8>;
+                        reg-names = "ocs_base", "ocs_wrapper_base";
+                        interrupts = <GIC_SPI 679 IRQ_TYPE_LEVEL_HIGH>;
+                        driver-name = "thunderbay-ocs_0";
+                        priority = <340>;
+                        memory-region = <&slice0_pixel_data_cma>;
+                        resets = <&rst_comss0 TBH_COMSS_OCS_OCS_RESET_N>;
+                        status = "okay";
+                };
+#endif
+
+#if (THB_SLICE_1_EN)
+                aes1: aes@285508000 {
+                        compatible = "intel,keembay-ocs-aes";
+                        reg = <0x2 0x85508000 0x0 0x1000
+                               0x2 0x85510000 0x0 0x8>;
+                        reg-names = "ocs_base", "ocs_wrapper_base";
+                        interrupts = <GIC_SPI 675 IRQ_TYPE_LEVEL_HIGH>;
+                        driver-name = "thunderbay-ocs_1";
+                        priority = <340>;
+                        memory-region = <&slice1_pixel_data_cma>;
+                        resets = <&rst_comss1 TBH_COMSS_OCS_OCS_RESET_N>;
+                        status = "okay";
+                };
+#endif
+
+#if (THB_SLICE_2_EN)
+                aes2: aes@385508000 {
+                        compatible = "intel,keembay-ocs-aes";
+                        reg = <0x3 0x85508000 0x0 0x1000
+                               0x3 0x85510000 0x0 0x8>;
+                        reg-names = "ocs_base", "ocs_wrapper_base";
+                        interrupts = <GIC_SPI 671 IRQ_TYPE_LEVEL_HIGH>;
+                        driver-name = "thunderbay-ocs_2";
+                        priority = <340>;
+                        memory-region = <&slice2_pixel_data_cma>;
+                        resets = <&rst_comss2 TBH_COMSS_OCS_OCS_RESET_N>;
+                        status = "okay";
+                };
+#endif
+
+#if (THB_SLICE_3_EN)
+                aes3: aes@485508000 {
+                        compatible = "intel,keembay-ocs-aes";
+                        reg = <0x4 0x85508000 0x0 0x1000
+                               0x4 0x85510000 0x0 0x8>;
+                        reg-names = "ocs_base", "ocs_wrapper_base";
+                        interrupts = <GIC_SPI 667 IRQ_TYPE_LEVEL_HIGH>;
+                        driver-name = "thunderbay-ocs_3";
+                        priority = <340>;
+                        memory-region = <&slice3_pixel_data_cma>;
+                        resets = <&rst_comss3 TBH_COMSS_OCS_OCS_RESET_N>;
+                        status = "okay";
+                };
+#endif
+
+                hcu0: hcu@8881b000 {
+                        compatible = "intel,keembay-ocs-hcu";
+                        reg = <0x0 0x8881b000 0x0 0x1000>;
+                        interrupts = <GIC_SPI 5 IRQ_TYPE_LEVEL_HIGH>;
+                        status = "okay";
+                };
+
+		axi_dma0: dma@80400000 {
+			compatible = "snps,axi-dma-1.01a";
+			reg = <0x0 0x80400000 0x0 0x1000>;
+			reg-names = "axidma_ctrl_regs";
+			interrupts = <GIC_SPI 717 IRQ_TYPE_LEVEL_HIGH>;
+			clock-names = "core-clk", "cfgr-clk";
+			clocks = <&fixed_rate_emu_10mhz>, <&fixed_rate_emu_10mhz>;
+			resets = <&rst_pss2 TBH_PSS_DMAC_INST_0_RST_N>;
+			#dma-cells = <1>;
+			dma-channels = <12>;
+			snps,dma-masters = <1>;
+			snps,data-width = <4>;
+			snps,priority = <0 0 0 0 0 0 0 0 0 0 0 0>;
+			snps,block-size = <4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096>;
+			snps,axi-max-burst-len = <32>;
+			status = "okay";
+		};
+
+		gpio0: gpio@80450000 {
+			compatible = "intel,thunderbay-pinctrl";
+			reg = <0x0 0x80450000 0x0 0x10000>;
+			bank-name = "thb-gpios";
+			gpio-controller;
+			#gpio-cells = <2>;
+			status = "okay";
+			resets = <&rst_pss1 TBH_PSS_GPIO_RST_N>;
+			interrupts = <GIC_SPI 705 IRQ_TYPE_LEVEL_HIGH>,
+			             <GIC_SPI 704 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+
+		stmmac_axi_setup: stmmac-axi-config {
+			snps,lpi_en;
+			snps,wr_osr_lmt = <0x0>;
+			snps,rd_osr_lmt = <0x2>;
+			snps,blen = <0x0 0x0 0x0 0x0 0x10 0x8 0x4>;
+		};
+
+		hddl_dev: hddl_device {
+			compatible = "intel,hddl-client";
+			xlink_chan = <1080>;
+			i2c_xlink_chan = <1081>;
+			board-id-gpios = <&gpio0 19 0
+					&gpio0 17 0
+					&gpio0  16 0
+					&gpio0  15 0>;
+			soc-reset = <&hddl_reset>;
+			kmb_xlink_tj@5a {
+				status = "okay";
+				compatible = "intel_tsens";
+				reg = <0x4000005a>;
+				local-host = <0x3>;
+				remote-host = <0x3>;
+				bus = <0x1>;
+			};
+			tmp112@48 {
+				status = "okay";
+				compatible = "tmp112";
+				#if (THB_SLICE_0_EN) && (THB_SLICE_1_EN) && (THB_SLICE_2_EN) && (THB_SLICE_3_EN)
+				reg = <0x48>;
+				#else
+				reg = <0x49>;
+				#endif
+				remote-host = <0x4>;
+				bus = <0xffff>;
+			};
+			adc081c@51 {
+				status = "okay";
+                                compatible = "adc081c";
+                                reg = <0x51>;
+                                remote-host = <0x4>;
+                                bus = <0xffff>;
+                        };
+			emc2103@2e {
+				status = "okay";
+				compatible = "emc2103";
+				reg = <0x2e>;
+				remote-host = <0x4>;
+				bus = <0xffff>;
+			};
+
+		 };
+		hddl_reset: reset_info {
+			board0 {
+				id = <0>;
+				soc0 {
+					id = <0>;
+                                        io-exp-name = "pca9575";
+	                                io-exp-addr = <0x20 0x2>;
+                               };
+                               soc1 {
+                                       id = <1>;
+                                       io-exp-name = "pca9575";
+                                       io-exp-addr = <0x20 0xA>;
+                               };
+                         };
+                       board8 {
+                               id = <8>;
+                               soc0 {
+                                       id = <0>;
+                                       io-exp-name = "pca9575";
+                                       io-exp-addr = <0x28 0x2>;
+                               };
+				soc1 {
+                                      id = <1>;
+                                       io-exp-name = "pca9575";
+                                       io-exp-addr = <0x28 0xA>;
+                               };
+			};
+                       board9 {
+                               id = <9>;
+                               soc0 {
+                                       id = <0>;
+                                       io-exp-name = "pca9575";
+                                       io-exp-addr = <0x29 0x2>;
+                               };
+                               soc1 {
+                                       id = <1>;
+                                       io-exp-name = "pca9575";
+                                       io-exp-addr = <0x29 0xA>;
+                              };
+			};
+                       };
+		icc_cfg: icc_max{
+			address-cells = <0x2>;
+			size-cells = <0x2>;
+                        reg = < 0x0 0x80450000 0x0 0x10C>;
+                        polarity = < 0xE >;
+
+                	icc_cpuss{
+                        	address-cells = <0x2>;
+                        	size-cells = <0x2>;
+				reg = <0x0 0x88830000 0x0 0x307C>;
+                        };
+                
+                	icc_cs_1{
+                        	address-cells = <0x2>;
+                        	size-cells = <0x2>;
+                        	reg = <0x1 0x85520000 0x0 0x307C>;
+                        };
+
+                	icc_cs_2{
+                        	address-cells = <0x2>;
+                        	size-cells = <0x2>;
+                        	reg = <0x2 0x85520000 0x0 0x307C>;
+                        };
+
+                	icc_cs_3{
+                        	address-cells = <0x2>;
+                        	size-cells = <0x2>;
+                        	reg = <0x3 0x85520000 0x0 0x307C>;
+                        };
+                
+                	icc_cs_4{
+                        	address-cells = <0x2>;
+                        	size-cells = <0x2>;
+                        	reg = <0x4 0x85520000 0x0 0x307C>;
+                        };
+                };
+                
+
+		pid_cfg: pid_cfg{
+				dts_thd_sar_pid_en_abort =<0x71c0>;
+			};
+
+		tsens: tsens@88830000 {
+			compatible = "intel,intel-tsens";
+			plat_name = "intel,thunderbay_thermal";
+			reg = <0x0 0x88830000 0x0 0x4050>;
+			interrupts = <GIC_SPI 82 IRQ_TYPE_LEVEL_HIGH>,
+                                     <GIC_SPI 397 IRQ_TYPE_LEVEL_HIGH>,
+                                     <GIC_SPI 395 IRQ_TYPE_LEVEL_HIGH>,
+                                     <GIC_SPI 393 IRQ_TYPE_LEVEL_HIGH>,
+                                     <GIC_SPI 391 IRQ_TYPE_LEVEL_HIGH>;
+                        interrupt-names = "cpuss","slice0","slice1","slice2","slice3";
+			icc_max = <&icc_cfg 1>;
+			#thermal-sensor-cells = <1>;
+
+			cpu_s {
+				plat_name = "intel,thunderbay_thermal";
+				passive_delay = <1000>;
+				polling_delay = <2000>;
+				trip_temp = <40000 80000 100000>;
+				trip_type = "passive", "passive", "critical";
+				pid_cfg = <&pid_cfg>;
+				enable_dts = "True";
+			};
+
+			cpu_n {
+				plat_name = "intel,thunderbay_thermal";
+				passive_delay = <1000>;
+				polling_delay = <2000>;
+				trip_temp = <40000 80000 100000>;
+				trip_type = "passive", "passive", "critical";
+				pid_cfg = <&pid_cfg>;
+				};
+
+			vpu0 {
+				plat_name = "intel,thunderbay_thermal";
+				address-cells = <0x2>;
+				size-cells = <0x2>;
+				reg = <0x1 0x85520000 0x0 0x4050>;
+				passive_delay = <1000>;
+				polling_delay = <2000>;
+				trip_temp = <40000 80000 100000>;
+				trip_type = "passive", "passive", "critical";
+				pid_cfg = <&pid_cfg>;
+				};
+
+			vpu1 {
+				plat_name = "intel,thunderbay_thermal";
+				address-cells = <0x2>;
+				size-cells = <0x2>;
+				reg = <0x2 0x85520000 0x0 0x4050>;
+				passive_delay = <1000>;
+				polling_delay = <2000>;
+				trip_temp = <40000 80000 100000>;
+				trip_type = "passive", "passive", "critical";
+				pid_cfg = <&pid_cfg>;
+				};
+
+			vpu2 {
+				plat_name = "intel,thunderbay_thermal";
+				address-cells = <0x2>;
+				size-cells = <0x2>;
+				reg = <0x3 0x85520000 0x0 0x4050>;
+				passive_delay = <1000>;
+				polling_delay = <2000>;
+				trip_temp = <40000 80000 100000>;
+				trip_type = "passive", "passive", "critical";
+				pid_cfg = <&pid_cfg>;
+				};
+
+			vpu3 {
+				plat_name = "intel,thunderbay_thermal";
+				address-cells = <0x2>;
+				size-cells = <0x2>;
+				reg = <0x4 0x85520000 0x0 0x4050>;
+				passive_delay = <1000>;
+				polling_delay = <2000>;
+				trip_temp = <40000 80000 100000>;
+				trip_type = "passive", "passive", "critical";
+				pid_cfg = <&pid_cfg>;
+				};
+
+			media0 {
+				reg = <0x1 0x85520000 0x0 0x4050>;
+				address-cells = <0x2>;
+				size-cells = <0x2>;
+				plat_name = "intel,thunderbay_thermal";
+				passive_delay = <1000>;
+				polling_delay = <2000>;
+				trip_temp = <40000 80000 100000>;
+				trip_type = "passive", "passive", "critical";
+				pid_cfg = <&pid_cfg>;
+				};
+
+			media1 {
+				plat_name = "intel,thunderbay_thermal";
+				address-cells = <0x2>;
+				size-cells = <0x2>;
+				reg = <0x2 0x85520000 0x0 0x4050>;
+				passive_delay = <1000>;
+				polling_delay = <2000>;
+				trip_temp = <40000 80000 100000>;
+				trip_type = "passive", "passive", "critical";
+				pid_cfg = <&pid_cfg>;
+				};
+
+			media2 {
+				plat_name = "intel,thunderbay_thermal";
+				address-cells = <0x2>;
+				size-cells = <0x2>;
+				reg = <0x3 0x85520000 0x0 0x4050>;
+				passive_delay = <1000>;
+				polling_delay = <2000>;
+				trip_temp = <40000 80000 100000>;
+				trip_type = "passive", "passive", "critical";
+				pid_cfg = <&pid_cfg>;
+				};
+
+			media3 {
+				plat_name = "intel,thunderbay_thermal";
+				address-cells = <0x2>;
+				size-cells = <0x2>;
+				reg = <0x4 0x85520000 0x0 0x4050>;
+				passive_delay = <1000>;
+				polling_delay = <2000>;
+				trip_temp = <40000 80000 100000>;
+				trip_type = "passive", "passive", "critical";
+				pid_cfg = <&pid_cfg>;
+				};
+
+	                vddr0 {
+		                reg = <0x1 0x85520000 0x0 0x4050>;
+			        address-cells = <0x2>;
+				size-cells = <0x2>;
+				plat_name = "intel,thunderbay_thermal";
+				passive_delay = <1000>;
+				polling_delay = <2000>;
+				trip_temp = <40000 80000 100000>;
+				trip_type = "passive", "passive", "critical";
+				pid_cfg = <&pid_cfg>;
+				};
+
+			vddr1 {
+				plat_name = "intel,thunderbay_thermal";
+				address-cells = <0x2>;
+				size-cells = <0x2>;
+				reg = <0x2 0x85520000 0x0 0x4050>;
+				passive_delay = <1000>;
+				polling_delay = <2000>;
+				trip_temp = <40000 80000 100000>;
+				trip_type = "passive", "passive", "critical";
+				pid_cfg = <&pid_cfg>;
+				};
+
+			vddr2 {
+				plat_name = "intel,thunderbay_thermal";
+				address-cells = <0x2>;
+				size-cells = <0x2>;
+				reg = <0x3 0x85520000 0x0 0x4050>;
+				passive_delay = <1000>;
+				polling_delay = <2000>;
+				trip_temp = <40000 80000 100000>;
+				trip_type = "passive", "passive", "critical";
+				pid_cfg = <&pid_cfg>;
+				};
+
+			vddr3 {
+				plat_name = "intel,thunderbay_thermal";
+				address-cells = <0x2>;
+				size-cells = <0x2>;
+				reg = <0x4 0x85520000 0x0 0x4050>;
+				passive_delay = <1000>;
+				polling_delay = <2000>;
+				trip_temp = <40000 80000 100000>;
+				trip_type = "passive", "passive", "critical";
+				pid_cfg = <&pid_cfg>;
+				};
+		};
+
+		thermal-zones {
+			 cpu-s {
+							/* milliseconds*/
+				polling-delay-passive = <1000>;
+				polling-delay = <2000>;
+						/* sensor       ID */
+				thermal-sensors = <&tsens 0>;
+				trips {
+					/* each zone within the SoC \
+					 * may have its own trips
+					 */
+					cpu_alert0: cpu-alert0 {
+							   /* millicelsius */
+						temperature = <40000>;
+						hysteresis = <2000>;
+						type = "passive";
+					};
+					cpu_alert1: cpu-alert1 {
+						temperature = <80000>;
+						hysteresis = <2000>;
+						type = "passive";
+					};
+					cpu-crit {
+						temperature = <100000>;
+						hysteresis = <2000>;
+						type = "critical";
+					};
+				};
+
+			cooling-maps {
+				map1 {
+					trip = <&cpu_alert1>;
+					cooling-device = <&CPU0 THERMAL_NO_LIMIT
+							THERMAL_NO_LIMIT>,
+					<&CPU1 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU2 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU3 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU4 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU5 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU6 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU7 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU8 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU9 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU10 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU11 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU12 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU13 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU14 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU15 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>;
+				};
+			};
+		};
+		cpu_n {
+			polling-delay-passive = <1000>;
+			polling-delay = <2000>;
+					/* sensor       ID */
+			thermal-sensors = <&tsens 1>;
+			trips {
+				/* each zone within the SoC \
+				 * may have its own trips
+				 */
+				cpu_n_alert0: cpu-alert0 {
+					/* millicelsius */
+					temperature = <40000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				cpu_n_alert1: cpu-alert1 {
+					temperature = <80000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				cpu_n_alert:cpu-crit {
+					temperature = <100000>;
+					hysteresis = <2000>;
+					type = "critical";
+				};
+			};
+			cooling-maps {
+				map1 {
+					trip = <&cpu_n_alert1>;
+					cooling-device = <&CPU0 THERMAL_NO_LIMIT
+							THERMAL_NO_LIMIT>,
+					<&CPU1 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU2 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU3 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU4 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU5 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU6 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU7 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU8 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU9 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU10 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU11 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU12 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU13 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU14 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+					<&CPU15 THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>;
+				};
+			};
+		};
+		vpu0 {
+			polling-delay-passive = <1000>;
+			polling-delay = <2000>;
+					/* sensor       ID */
+			thermal-sensors = <&tsens 2>;
+			trips {
+				/* each zone within the SoC \
+				 * may have its own trips
+				 */
+				vpu0_alert0: vpu-alert0 {
+					/* millicelsius */
+					temperature = <40000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				vpu0_alert1: vpu-alert1 {
+					temperature = <80000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				vpu0_alert:vpu-crit {
+					temperature = <100000>;
+					hysteresis = <2000>;
+					type = "critical";
+				};
+			};
+		};
+		vpu1 {
+			polling-delay-passive = <1000>;
+			polling-delay = <2000>;
+					/* sensor       ID */
+			thermal-sensors = <&tsens 3>;
+			trips {
+				/* each zone within the SoC \
+				 * may have its own trips
+				 */
+				vpu1_alert0: vpu-alert0 {
+					/* millicelsius */
+					temperature = <40000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				vpu1_alert1: vpu-alert1 {
+					temperature = <80000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				vpu1_alert:vpu-crit {
+					temperature = <100000>;
+					hysteresis = <2000>;
+					type = "critical";
+				};
+			};
+		};
+
+		vpu2 {
+			polling-delay-passive = <1000>;
+			polling-delay = <2000>;
+					/* sensor       ID */
+			thermal-sensors = <&tsens 4>;
+			trips {
+				/* each zone within the SoC \
+				 * may have its own trips
+				 */
+				vpu2_alert0: vpu-alert0 {
+					/* millicelsius */
+					temperature = <40000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				vpu2_alert1: vpu-alert1 {
+					temperature = <80000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				vpu2_alert:vpu-crit {
+					temperature = <100000>;
+					hysteresis = <2000>;
+					type = "critical";
+				};
+			};
+		};
+
+		vpu3 {
+			polling-delay-passive = <1000>;
+			polling-delay = <2000>;
+					/* sensor       ID */
+			thermal-sensors = <&tsens 5>;
+			trips {
+				/* each zone within the SoC \
+				 * may have its own trips
+				 */
+				vpu3_alert0: vpu-alert0 {
+					/* millicelsius */
+					temperature = <40000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				vpu3_alert1: vpu-alert1 {
+					temperature = <80000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				vpu3_alert:vpu-crit {
+					temperature = <100000>;
+					hysteresis = <2000>;
+					type = "critical";
+				};
+			};
+		};
+
+		media0 {
+			polling-delay-passive = <1000>;
+			polling-delay = <2000>;
+					/* sensor       ID */
+			thermal-sensors = <&tsens 6>;
+			trips {
+				/* each zone within the SoC \
+				 * may have its own trips
+				 */
+				media0_alert0: media-alert0 {
+					/* millicelsius */
+					temperature = <40000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				media0_alert1: media-alert1 {
+					temperature = <80000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				media0_alert:media-crit {
+					temperature = <100000>;
+					hysteresis = <2000>;
+					type = "critical";
+				};
+			};
+#if (THB_SLICE_0_EN)
+			cooling-maps {
+				map0 {
+					trip = <&media0_alert0>;
+					cooling-device = <&media_slice0 0 0>;
+				};
+				map1 {
+					trip = <&media0_alert1>;
+					cooling-device = <&media_slice0 1 1>;
+				};
+				map2 {
+					trip = <&media0_alert>;
+					cooling-device = <&media_slice0 2 2>;
+				};
+			};
+#endif
+		};
+
+		media1 {
+			polling-delay-passive = <1000>;
+			polling-delay = <2000>;
+					/* sensor       ID */
+			thermal-sensors = <&tsens 7>;
+			trips {
+				/* each zone within the SoC \
+				 * may have its own trips
+				 */
+				media1_alert0: media-alert0 {
+					/* millicelsius */
+					temperature = <40000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				media1_alert1: media-alert1 {
+					temperature = <80000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				media1_alert:media-crit {
+					temperature = <100000>;
+					hysteresis = <2000>;
+					type = "critical";
+				};
+			};
+#if (THB_SLICE_1_EN)
+			cooling-maps {
+				map0 {
+					trip = <&media1_alert0>;
+					cooling-device = <&media_slice1 0 0>;
+				};
+				map1 {
+					trip = <&media1_alert1>;
+					cooling-device = <&media_slice1 1 1>;
+				};
+				map2 {
+					trip = <&media1_alert>;
+					cooling-device = <&media_slice1 2 2>;
+				};
+			};
+#endif
+		};
+
+		media2 {
+			polling-delay-passive = <1000>;
+			polling-delay = <2000>;
+					/* sensor       ID */
+			thermal-sensors = <&tsens 8>;
+			trips {
+				/* each zone within the SoC \
+				 * may have its own trips
+				 */
+				media2_alert0: media-alert0 {
+					/* millicelsius */
+					temperature = <40000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				media2_alert1: media-alert1 {
+					temperature = <80000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				media2_alert:media-crit {
+					temperature = <100000>;
+					hysteresis = <2000>;
+					type = "critical";
+				};
+			};
+#if (THB_SLICE_2_EN)
+			cooling-maps {
+				map0 {
+					trip = <&media2_alert0>;
+					cooling-device = <&media_slice2 0 0>;
+				};
+				map1 {
+					trip = <&media2_alert1>;
+					cooling-device = <&media_slice2 1 1>;
+				};
+				map2 {
+					trip = <&media2_alert>;
+					cooling-device = <&media_slice2 2 2>;
+				};
+			};
+#endif
+		};
+
+		media3 {
+			polling-delay-passive = <1000>;
+			polling-delay = <2000>;
+					/* sensor       ID */
+			thermal-sensors = <&tsens 9>;
+			trips {
+				/* each zone within the SoC \
+				 * may have its own trips
+				 */
+				media3_alert0: media-alert0 {
+					/* millicelsius */
+					temperature = <40000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				media3_alert1: media-alert1 {
+					temperature = <80000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				media3_alert:media-crit {
+					temperature = <100000>;
+					hysteresis = <2000>;
+					type = "critical";
+				};
+			};
+#if (THB_SLICE_3_EN)
+			cooling-maps {
+				map0 {
+					trip = <&media3_alert0>;
+					cooling-device = <&media_slice3 0 0>;
+				};
+				map1 {
+					trip = <&media3_alert1>;
+					cooling-device = <&media_slice3 1 1>;
+				};
+				map2 {
+					trip = <&media3_alert>;
+					cooling-device = <&media_slice3 2 2>;
+				};
+			};
+#endif
+		};
+
+		vddr0 {
+			polling-delay-passive = <1000>;
+			polling-delay = <2000>;
+					/* sensor       ID */
+			thermal-sensors = <&tsens 10>;
+			trips {
+				/* each zone within the SoC \
+				 * may have its own trips
+				 */
+				vddr0_alert0: vddr-alert0 {
+					/* millicelsius */
+					temperature = <40000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				vddr0_alert1: vddr-alert1 {
+					temperature = <80000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				vddr0_alert: vddr-crit {
+					temperature = <100000>;
+					hysteresis = <2000>;
+					type = "critical";
+				};
+			};
+		};
+
+		vddr1 {
+			polling-delay-passive = <1000>;
+			polling-delay = <2000>;
+					/* sensor       ID */
+			thermal-sensors = <&tsens 11>;
+			trips {
+				/* each zone within the SoC \
+				 * may have its own trips
+				 */
+				vddr1_alert0: vddr-alert0 {
+					/* millicelsius */
+					temperature = <40000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				vddr1_alert1: vddr-alert1 {
+					temperature = <80000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				vddr1_alert: vddr-crit {
+					temperature = <100000>;
+					hysteresis = <2000>;
+					type = "critical";
+				};
+			};
+		};
+
+		vddr2 {
+			polling-delay-passive = <1000>;
+			polling-delay = <2000>;
+					/* sensor       ID */
+			thermal-sensors = <&tsens 12>;
+			trips {
+				/* each zone within the SoC \
+				 * may have its own trips
+				 */
+				vddr2_alert0: vddr-alert0 {
+					/* millicelsius */
+					temperature = <40000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				vddr2_alert1: vddr-alert1 {
+					temperature = <80000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				vddr2_alert: vddr-crit {
+					temperature = <100000>;
+					hysteresis = <2000>;
+					type = "critical";
+				};
+			};
+		};
+
+		vddr3 {
+			polling-delay-passive = <1000>;
+			polling-delay = <2000>;
+					/* sensor       ID */
+			thermal-sensors = <&tsens 13>;
+			trips {
+				/* each zone within the SoC \
+				 * may have its own trips
+				 */
+				vddr3_alert0: vddr-alert0 {
+					/* millicelsius */
+					temperature = <40000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				vddr3_alert1: vddr-alert1 {
+					temperature = <80000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				vddr3_alert: vddr-crit {
+					temperature = <100000>;
+					hysteresis = <2000>;
+					type = "critical";
+				};
+			};
+		};
+	};
+
+		mtl_rx_setup: rx-queues-config {
+			snps,rx-queues-to-use = <0x8>;
+			snps,rx-sched-sp;
+
+			queue0 {
+				snps,dcb-algorithm;
+				snps,map-to-dma-channel = <0x0>;
+				snps,priority = <0x0>;
+			};
+
+	                queue1 {
+		                snps,dcb-algorithm;
+				snps,map-to-dma-channel = <0x1>;
+				snps,priority = <0x1>;
+			};
+
+			queue2 {
+				snps,dcb-algorithm;
+				snps,map-to-dma-channel = <0x2>;
+				snps,priority = <0x2>;
+			};
+
+			queue3 {
+				snps,dcb-algorithm;
+				snps,map-to-dma-channel = <0x3>;
+				snps,priority = <0x3>;
+			};
+
+			queue4 {
+				snps,dcb-algorithm;
+				snps,map-to-dma-channel = <0x4>;
+				snps,priority = <0x4>;
+			};
+
+			queue5 {
+				snps,dcb-algorithm;
+				snps,map-to-dma-channel = <0x5>;
+				snps,priority = <0x5>;
+			};
+
+			queue6 {
+				snps,dcb-algorithm;
+				snps,map-to-dma-channel = <0x6>;
+				snps,priority = <0x6>;
+			};
+
+			queue7 {
+				snps,dcb-algorithm;
+				snps,map-to-dma-channel = <0x7>;
+				snps,priority = <0x7>;
+			};
+		};
+
+		mtl_tx_setup: tx-queues-config {
+			snps,tx-queues-to-use = <0x8>;
+	                snps,tx-sched-wrr;
+
+		        queue0 {
+		                snps,weight = <0x10>;
+			        snps,dcb-algorithm;
+				snps,priority = <0x0>;
+			};
+
+	                queue1 {
+		                snps,weight = <0x10>;
+			        snps,dcb-algorithm;
+				snps,priority = <0x1>;
+			};
+
+			queue2 {
+				snps,weight = <0x10>;
+				snps,dcb-algorithm;
+				snps,priority = <0x2>;
+			};
+
+			queue3 {
+				snps,weight = <0x10>;
+				snps,dcb-algorithm;
+				snps,priority = <0x3>;
+			};
+
+			queue4 {
+				snps,weight = <0x10>;
+				snps,dcb-algorithm;
+				snps,priority = <0x4>;
+			};
+
+			queue5 {
+				snps,weight = <0x10>;
+				snps,dcb-algorithm;
+				snps,priority = <0x5>;
+			};
+
+			queue6 {
+				snps,weight = <0x10>;
+				snps,dcb-algorithm;
+				snps,priority = <0x6>;
+			};
+
+			queue7 {
+				snps,weight = <0x10>;
+				snps,dcb-algorithm;
+				snps,priority = <0x7>;
+			};
+		};
+
+	        gmac0: ethernet@804F0000 {
+			compatible = "snps,dwmac-4.10a";
+			interrupts = <GIC_SPI 0x2c5 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "macirq";
+			reg = <0x0 0x804F0000 0x0 0x8000>;
+			mac-address = [00 00 00 00 00 00];
+			phy-handle = <&phy0>;
+			phy-mode = "rgmii-rxid";
+		        rx-fifo-depth = <0x8000>;
+	                tx-fifo-depth = <0x8000>;
+		        clocks = <&scmi_clk INST_GBE_0_CLK_CSR_I>,
+			         <&scmi_clk INST_GBE_0_CLK_PTP_REF_I>,
+				 <&scmi_clk INST_GBE_0_CLK_TX_I>,
+				 <&scmi_clk GPIO_PCLK>;
+			clock-names = "stmmaceth", "ptp_ref", "tx_clk", "gpio-pclk";
+			resets = <&rst_pss2 TBH_PSS_ETHERNET_INST_0_RST_N>;
+			reset-names = "stmmaceth";
+			snps,tso;
+			status = "okay";
+			snps,pbl = <0x4>;
+			snps,en-tx-lpi-clockgating;
+		        snps,axi-config = <&stmmac_axi_setup>;
+			snps,mtl-rx-config = <&mtl_rx_setup>;
+			snps,mtl-tx-config = <&mtl_tx_setup>;
+			snps,multicast-filter-bins = "HASH_TABLE_SIZE";
+			snps,perfect-filter-entries = <0x80>;
+	                mdio0 {
+		                #address-cells = <0x1>;
+	                        #size-cells = <0x0>;
+		                compatible = "snps,dwmac-mdio";
+
+		                phy0: ethernet-phy@0 {
+		                        compatible = "ethernet-phy-id0141.0dd0", "ethernet-phy-ieee802.3-c22";
+		                        reg = <0x0>;
+	                        };
+		        };
+		};
+
+		gmac1: ethernet@80500000 {
+			compatible = "snps,dwmac-4.10a";
+			interrupts = <GIC_SPI 0x2c4 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "macirq";
+			reg = <0x0 0x80500000 0x0 0x8000>;
+			mac-address = [00 00 00 00 00 00];
+			phy-handle = <&phy1>;
+			phy-mode = "rgmii-rxid";
+			rx-fifo-depth = <0x8000>;
+			tx-fifo-depth = <0x8000>;
+		        clocks = <&scmi_clk INST_GBE_1_CLK_CSR_I>,
+			         <&scmi_clk INST_GBE_1_CLK_PTP_REF_I>,
+				 <&scmi_clk INST_GBE_1_CLK_TX_I>,
+				 <&scmi_clk GPIO_PCLK>;
+			clock-names = "stmmaceth", "ptp_ref", "tx_clk", "gpio-pclk";
+			resets = <&rst_pss2 TBH_PSS_ETHERNET_INST_1_RST_N>;
+			reset-names = "stmmaceth";
+			snps,tso;
+			status = "okay";
+			snps,pbl = <0x4>;
+			snps,en-tx-lpi-clockgating;
+			snps,axi-config = <&stmmac_axi_setup>;
+			snps,mtl-rx-config = <&mtl_rx_setup>;
+			snps,mtl-tx-config = <&mtl_tx_setup>;
+			snps,multicast-filter-bins = "HASH_TABLE_SIZE";
+			snps,perfect-filter-entries = <0x80>;
+			mdio0 {
+				#address-cells = <0x1>;
+				#size-cells = <0x0>;
+				compatible = "snps,dwmac-mdio";
+
+				phy1: ethernet-phy@1 {
+					compatible = "ethernet-phy-id0141.0dd0", "ethernet-phy-ieee802.3-c22";
+					reg = <0x0>;
+				};
+			};
+		};
+
+		xlink-core {
+			compatible = "intel,keembay-xlink";
+		};
+
+		xlink-secure {
+			compatible = "intel,xlink-secure";
+                        memory-region = <
+					 #if (THB_SLICE_0_EN)
+						&slice0_pixel_data_cma
+					 #endif
+					 #if (THB_SLICE_1_EN)
+						&slice1_pixel_data_cma
+					 #endif
+					 #if (THB_SLICE_2_EN)
+						&slice2_pixel_data_cma
+					 #endif
+					 #if (THB_SLICE_3_EN)
+						&slice3_pixel_data_cma
+					 #endif
+				        >;
+                       sks-mask = <(THB_OCSMASK_SLICE0 |
+                                    THB_OCSMASK_SLICE1 |
+                                    THB_OCSMASK_SLICE2 |
+                                    THB_OCSMASK_SLICE3)>;
+		};
+
+		vpusmm_csram{
+			#address-cells = <0x01>;
+			#size-cells = <0x01>;
+			compatible = "intel,keembay-vpu-mgr";
+			reg = <0x80000000 0x18 0x00 0x1800000>;
+			dma-ranges = <0x80000000 0x18 0x00 0x1800000>;
+			intel,keembay-vpu-ipc-id = <0x20>;
+			memory-region = <&csram_reserved>;
+		};
+
+#if (THB_SLICE_0_EN)
+
+		vpu_smmu0: iommu@120d00000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x01 0x20d00000 0x0 0x100000>;
+			#iommu-cells = <0x1>;
+			#global-interrupts = <0x1>;
+			status = "disabled";
+		};
+
+		vpu_slice0 {
+			/*
+			 * This node is used to define the devices related to
+			 * slice 0.
+			 *
+			 * Here we define the VPU -> CPU mapping as follows:
+			 * 0x0000_0000:0x7FFF_FFFF -> 0x01_0000_0000:0x01_7FFFF_FFFF
+			 * 0x8180_0000:0xFFFF_FFFF -> 0x11_8180_0000:0x11_FFFF_FFFF
+			 *
+			 * This allows to express the addresses in child nodes
+			 * as VPU addresses (Linux will automatically convert
+			 * them to CPU addresses).
+			 *
+			 * We set #address-cells and #size-cells to 1 since VPU
+			 * addresses are 32-bit long.
+			 */
+			compatible = "simple-bus";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0x00000000 0x01 0x00000000 0x80000000>, /* 2GB */
+				 <0x80000000 0x18 0x00000000 0x01800000>, /* 24MB - CSRAM */
+				 <0x81800000 THB_SLICE_0_UPPER32BITS_ADDR 0x81800000 0x13600000>, /* 310MB - DDR */
+				 <0x94E00000 0x01 0x85400000 0x200000>, /* 2MB - VPU CPR */
+				 <0x95000000 THB_SLICE_0_UPPER32BITS_ADDR 0x95000000 0x6B000000>; /* 1712MB - DDR */
+			dma-ranges = <0x81800000 THB_SLICE_0_UPPER32BITS_ADDR 0x81800000 0x13600000>, /* 310MB - DDR */
+				     <0x95000000 THB_SLICE_0_UPPER32BITS_ADDR 0x95000000 0x6B000000>; /* 1712MB - DDR */
+
+			slice0_ipc: ipc@203300f0 {
+				status = "okay";
+				compatible = "intel,keembay-ipc";
+				reg = <0x203300f0 0x310>, /* ARM TIM FIFO */
+				      <0x208200f0 0x310>; /* MSS TIM FIFO */
+				reg-names = "css_fifo", "mss_fifo";
+				/* GIC interrupt number: 938 (906 + 32). */
+				interrupts = <GIC_SPI 906 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "css_fifo";
+				memory-region = <&slice0_css_ipc_reserved>,
+						<&slice0_mss_ipc_reserved>;
+				/*
+				 * TODO: Re-enable the following clock
+				 * definition and update it to the correct
+				 * value once SCMI clocks are support in ATF.
+				 */
+				//clocks = <&scmi_clk KEEM_BAY_A53_TIM>;
+			};
+
+			slice0_vpuipc: vpu-ipc@3f00209c {
+				status = "okay";
+				compatible = "intel,keembay-vpu-ipc";
+				/* NCE WDT watchdog,
+				 * NCE TIM_GEN_CONFIG,
+				 * MSS WDT watchdog,
+				 * MSS TIM_GEN_CONFIG
+				 */
+				reg = <0x3f00209c 0x10>,
+				      <0x3f003008 0x4>,
+				      <0x2082009c 0x10>,
+				      <0x20821008 0x4>;
+				reg-names = "nce_wdt",
+					    "nce_tim_cfg",
+					    "mss_wdt",
+					    "mss_tim_cfg";
+				/*
+				 * VPU IPC needs pointers to three regions:
+				 * - VPU firmware area
+				 * - VPU X509 region (shared among all slices)
+				 * - Reference to MSS IPC area
+				 */
+				memory-region = <&slice0_vpu_reserved>,
+						<&vpu_x509_reserved>,
+						<&slice0_mss_ipc_reserved>;
+				/*
+				 * TODO: rename 'cpu_clock' to 'vpu_clock' and
+				 * remove all the PLL clocks once the VPU/IPC
+				 * driver is updated.
+				 */
+				clocks = <&scmi_clk VPU2_CORE_SOC_CLK_COMPUTESS0>,
+					 <&scmi_clk VPU2_CORE_SOC_CLK_COMPUTESS0>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>;
+				clock-names = "cpu_clock",
+					      "pll_0_out_0", "pll_0_out_1",
+					      "pll_0_out_2", "pll_0_out_3",
+					      "pll_1_out_0", "pll_1_out_1",
+					      "pll_1_out_2", "pll_1_out_3",
+					      "pll_2_out_0", "pll_2_out_1",
+					      "pll_2_out_2", "pll_2_out_3";
+				/* TODO: confirm these IRQs are correct. */
+				interrupts = <GIC_SPI 938 IRQ_TYPE_LEVEL_HIGH>,
+					     <GIC_SPI 928 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "nce_wdt", "mss_wdt";
+				/*
+				 * The following is saying that we want NCE WDT
+				 * and MSS WDT configured as nn2os_irq[0] and
+				 * rt2os_irq[0].
+				 * TODO: confirm that this actually works as
+				 * intended.
+				 */
+				intel,keembay-vpu-ipc-nce-wdt-redirect = <0>;
+				intel,keembay-vpu-ipc-mss-wdt-redirect = <0>;
+				/*
+				 * TODO: change the following to the right IMR
+				 * number (not used for now).
+				 */
+				intel,keembay-vpu-ipc-imr = <9>;
+				intel,keembay-vpu-ipc-id = <0>;
+				intel,keembay-ipc = <&slice0_ipc>;
+				/* TODO:
+				 * Add power domain support to drivers, enable in
+				 * device tree.
+				 * power-domains =
+				 *	<&scmi_devpd KEEM_BAY_MSS_CPU_POWER_DOMAIN>;
+				 */
+			};
+
+			xlink-ipc0 {
+				status = "okay";
+				compatible = "intel,keembay-xlink-ipc";
+				memory-region = <&slice0_css_xlink_reserved>,
+						<&slice0_mss_xlink_reserved>,
+						<&slice0_pixel_data_cma>;
+				intel,keembay-vpu-ipc-id = <0x0>;
+				intel,keembay-vpu-ipc-name = "vpu-slice-0";
+				intel,keembay-vpu-ipc = <&slice0_vpuipc>;
+				intel,vpu-device-family = <THB_FULL_OR_PRIME>;	/* Used for SWID generation; Full=0x1, Prime=0x0 */
+			};
+
+			vpu0_mm@0 {
+				#intel,smmu_params-cells = <0x5>;
+				compatible  = "intel,vpu";
+				intel,smmu_params = <0x80000000 0x18 0x00000000 0x01800000 (IOMMU_READ|IOMMU_WRITE)>, /* 24 MB */
+						    <0x81800000 THB_SLICE_0_UPPER32BITS_ADDR 0x81800000 0x13600000 (IOMMU_READ|IOMMU_WRITE)>, /* 310 MB */
+						    <0x94E00000 0x01 0x85400000 0x200000 (IOMMU_READ|IOMMU_WRITE)>, /* 2MB */
+						    <0x95000000 THB_SLICE_0_UPPER32BITS_ADDR 0x95000000 0x6B000000 (IOMMU_READ|IOMMU_WRITE)>; /* 1712 MB */
+
+				iommus = <&vpu_smmu0 47>,
+					 <&vpu_smmu0 45>,
+					 <&vpu_smmu0 0>,
+					 <&vpu_smmu0 1>,
+					 <&vpu_smmu0 2>,
+					 <&vpu_smmu0 3>,
+					 <&vpu_smmu0 19>,
+					 <&vpu_smmu0 20>,
+					 <&vpu_smmu0 40>,
+					 <&vpu_smmu0 41>,
+					 <&vpu_smmu0 46>,
+					 <&vpu_smmu0 16>,
+					 <&vpu_smmu0 17>,
+					 <&vpu_smmu0 44>;
+			};
+                        vpusmm0 {
+				compatible = "intel,keembay-vpu-mgr";
+				memory-region = <&slice0_pixel_data_cma>;
+				intel,keembay-vpu-ipc-id = <0x0>;
+				intel,keembay-vpu-phys-slice-id = <0x0>;
+			};
+
+		};
+
+            media_slice0: media_slice0@185538000 {
+                        #address-cells = <0x2>;
+                        #size-cells = <0x2>;
+                        #cooling-cells = <2>;
+                        status = "okay";
+                        compatible = "thunderbay,hantro";
+			memory-region = <&slice0_pixel_data_cma &slice0_codec_reserved>;
+			mmu-tcu-reg = <0x1 0x85400020>;
+			resets = <&rst_comss0 TBH_COMSS_MEDIA_VCEJ_CORERST_N>,
+				 <&rst_comss0 TBH_COMSS_MEDIA_VCEJ_ARESET_N>,
+				 <&rst_comss0 TBH_COMSS_MEDIA_VCEJ_PRESET_N>,
+				 <&rst_comss0 TBH_COMSS_MEDIA_VCE_CORERST_N>,
+				 <&rst_comss0 TBH_COMSS_MEDIA_VCE_ARESET_N>,
+				 <&rst_comss0 TBH_COMSS_MEDIA_VCE_PRESET_N>,
+				 <&rst_comss0 TBH_COMSS_MEDIA_VCDA_CORERST_N>,
+				 <&rst_comss0 TBH_COMSS_MEDIA_VCDA_ARESET_N>,
+				 <&rst_comss0 TBH_COMSS_MEDIA_VCDA_PRESET_N>,
+				 <&rst_comss0 TBH_COMSS_MEDIA_VCDB_CORERST_N>,
+				 <&rst_comss0 TBH_COMSS_MEDIA_VCDB_ARESET_N>,
+				 <&rst_comss0 TBH_COMSS_MEDIA_VCDB_PRESET_N>,
+				 <&rst_comss0 TBH_COMSS_MEDIA_TBU0_ARESET_N>,
+				 <&rst_comss0 TBH_COMSS_MEDIA_TBU1_ARESET_N>,
+				 <&rst_comss0 TBH_COMSS_MEDIA_TBU2_ARESET_N>,
+				 <&rst_comss0 TBH_COMSS_MEDIA_TBU3_ARESET_N>,
+				 <&rst_comss0 TBH_COMSS_MEDIA_TBU4_ARESET_N>,
+				 <&rst_comss0 TBH_COMSS_MEDIA_TCU_ARESET_N>,
+				 <&rst_comss0 TBH_COMSS_MEDIA_DTI_ARESET_N>;
+			reset-names = "vcej_reset_core0",
+				"vcej_reset_areset0",
+				"vcej_reset_preset0",
+				"vce_reset_core0",
+				"vce_reset_areset0",
+				"vce_reset_preset0",
+				"vcda_reset_core0",
+				"vcda_reset_areset0",
+				"vcda_reset_preset0",
+				"vcdb_reset_core0",
+				"vcdb_reset_areset0",
+				"vcdb_reset_preset0",
+				"tbu0_areset0",
+				"tbu1_areset0",
+				"tbu2_areset0",
+				"tbu3_areset0",
+				"tbu4_areset0",
+				"tcu_areset0",
+				"dti_areset0";
+			clocks = <&scmi_clk VC8000EJ_SUBSYS_CORECLK_VCEJ_COMPUTESS0>,
+				 <&scmi_clk VC8000EJ_SUBSYS_ACLK_COMPUTESS0>,
+				 <&scmi_clk VC8000E_SUBSYS_CORECLK_VCE_COMPUTESS0>,
+				 <&scmi_clk VC8000E_SUBSYS_ACLK_COMPUTESS0>,
+				 <&scmi_clk VC8000D_A_SUBSYS_CORECLK_VCD_COMPUTESS0>,
+				 <&scmi_clk VC8000D_A_SUBSYS_ACLK_COMPUTESS0>,
+				 <&scmi_clk VC8000D_B_SUBSYS_CORECLK_VCD_COMPUTESS0>,
+				 <&scmi_clk VC8000D_B_SUBSYS_ACLK_COMPUTESS0>;
+			clock-names = "vc8000ej_coreclk_computess0",
+				"vc8000ej_aclk_computess0",
+				"vc8000e_coreclk_computess0",
+				"vc8000e_aclk_computess0",
+				"vc8000da_coreclk_computess0",
+				"vc8000da_aclk_computess0",
+				"vc8000db_coreclk_computess0",
+				"vc8000db_aclk_computess0";
+
+                        encoderA0@185538000 {
+                                reg = <0x1 0x85538000 0x0 0x7D0>;
+                                reg-names = "reg-encA0";
+                                // GIC interrupt number: 683 (651 + 32).
+                                interrupts = <0x0 651 0x4>;
+                                interrupt-names = "irq-encA0";
+                                status = "okay";
+                                dec400encA0@185530000 {
+                                     #address-cells = <0x2>;
+                                     #size-cells = <0x2>;
+                                     reg = <0x1 0x85530000 0x0 0x1880>;
+                                     reg-names = "reg-dec400encA0";
+                                     // GIC interrupt number: 682 (650 + 32).
+                                     interrupts = <0 650 0x4>;
+                                     interrupt-names = "irq-dec400encA0";
+                                     status = "okay";
+                                };
+                        };
+
+                        encoderB0@185539000 {
+                                reg = <0x1 0x85539000 0x0 0x7D0>;
+                                reg-names = "reg-encB0";
+                                // GIC interrupt number: 681 (649 + 32).
+                                interrupts = <0x0 649 0x4>;
+                                interrupt-names = "irq-encB0";
+                                status = "okay";
+                                dec400encB0@185532000 {
+                                     #address-cells = <0x2>;
+                                     #size-cells = <0x2>;
+                                     reg = <0x1 0x85532000 0x0 0x1880>;
+                                     reg-names = "reg-dec400encB0";
+                                     // GIC interrupt number: 680 (648 + 32).
+                                     interrupts = <0 648 0x4>;
+                                     interrupt-names = "irq-dec400encB0";
+                                     status = "okay";
+                                };
+                        };
+
+                        encoderC0@18553C000 {
+                                reg = <0x1 0x8553C000 0x0 0x7D0>;
+                                reg-names = "reg-encC0";
+                                // GIC interrupt number: 654 (622 + 32).
+                                interrupts = <0x0 622 0x4>;
+                                interrupt-names = "irq-encC0";
+                                status = "okay";
+                        };
+
+                        decoderA0@18553A000 {
+                                #address-cells = <0x2>;
+                                #size-cells = <0x2>;
+                                reg = <0x1 0x8553A000 0x0 0x650>;
+                                reg-names = "reg-decA0";
+                                // GIC interrupt number: 679 (647 + 32).
+                                interrupts = <0x0 647 0x4>;
+                                interrupt-names = "irq-decA0";
+                                status = "okay";
+                                dec400decA0@185534000 {
+                                     #address-cells = <0x2>;
+                                     #size-cells = <0x2>;
+                                     reg = <0x1 0x85534000 0x0 0x1900>;
+                                     reg-names = "reg-dec400decA0";
+                                     // GIC interrupt number: 677 (645 + 32).
+                                     interrupts = <0 645 0x4>;
+                                     interrupt-names = "irq-dec400decA0";
+                                     status = "okay";
+                                };
+
+                                cache_VC8000D_0_DIRRD@18553D000 {
+                                        #address-cells = <0x2>;
+                                        #size-cells = <0x2>;
+                                        reg = <0x1 0x8553d000 0x0 0x180>;
+                                        reg-names = "reg-cachedecA00";
+                                        interrupts = <0x0 0x286 0x4>;
+                                        interrupt-names = "irq-cachedecA00";
+                                        status = "okay";
+                                };
+
+                                cache_VC8000D_0_DIRWR@18553D000 {
+                                        #address-cells = <0x2>;
+                                        #size-cells = <0x2>;
+                                        reg = <0x1 0x8553d000 0x0 0x180>;
+                                        reg-names = "reg-cachedecA01";
+                                        interrupts = <0x0 0x286 0x4>;
+                                        interrupt-names = "irq-cachedecA01";
+                                        status = "okay";
+                                };
+                        };
+
+                        decoderB0@18553B000 {
+                                reg = <0x1 0x8553B000 0x0 0x650>;
+                                reg-names = "reg-decB0";
+                                // GIC interrupt number: 676 (644 + 32).
+                                interrupts = <0x0 644 0x4>;
+                                interrupt-names = "irq-decB0";
+                                status = "okay";
+                                dec400decB0@185536000 {
+                                     #address-cells = <0x2>;
+                                     #size-cells = <0x2>;
+                                     reg = <0x1 0x85536000 0x0 0x1900>;
+                                     reg-names = "reg-dec400decB0";
+                                     //GIC interrupt number: 674 (642 + 32).
+                                     interrupts = <0 642 0x4>;
+                                     interrupt-names = "irq-dec400decB0";
+                                     status = "okay";
+                                };
+
+                                cache_VC8000D_1_DIRRD@18553D800 {
+                                        #address-cells = <0x2>;
+                                        #size-cells = <0x2>;
+                                        reg = <0x1 0x8553d800 0x0 0x180>;
+                                        reg-names = "reg-cachedecB00";
+                                        interrupts = <0x0 0x283 0x4>;
+                                        interrupt-names = "irq-cachedecB00";
+                                        status = "okay";
+                                };
+
+                                cache_VC8000D_1_DIRWR@18553D800 {
+                                        #address-cells = <0x2>;
+                                        #size-cells = <0x2>;
+                                        reg = <0x1 0x8553d800 0x0 0x180>;
+                                        reg-names = "reg-cachedecB01";
+                                        interrupts = <0x0 0x283 0x4>;
+                                        interrupt-names = "irq-cachedecB01";
+                                        status = "okay";
+                                };
+                        };
+            };
+#endif
+#if (THB_SLICE_1_EN)
+
+		vpu_smmu1: iommu@220d00000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x02 0x20d00000 0x0 0x100000>;
+			#iommu-cells = <0x1>;
+			status = "disabled";
+		};
+
+		vpu_slice1 {
+			/*
+			 * This node is used to define the devices related to
+			 * slice 1.
+			 *
+			 * Here we define the VPU -> CPU mapping as follows:
+			 * 0x0000_0000:0x7FFF_FFFF -> 0x02_0000_0000:0x02_7FFFF_FFFF
+			 * 0x8180_0000:0xFFFF_FFFF -> 0x13_8180_0000:0x13_FFFF_FFFF
+			 *
+			 * This allows to express the addresses in child nodes
+			 * as VPU addresses (Linux will automatically convert
+			 * them to CPU addresses).
+			 *
+			 * We set #address-cells and #size-cells to 1 since VPU
+			 * addresses are 32-bit long.
+			 */
+			compatible = "simple-bus";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0x00000000 0x02 0x00000000 0x80000000>, /* 2GB */
+				 <0x80000000 0x18 0x00000000 0x01800000>, /* 24MB - CSRAM */
+				 <0x81800000 THB_SLICE_1_UPPER32BITS_ADDR 0x81800000 0x13600000>, /* 310MB - DDR */
+				 <0x94E00000 0x01 0x85400000 0x200000>, /* 2MB - VPU CPR */
+				 <0x95000000 THB_SLICE_1_UPPER32BITS_ADDR 0x95000000 0x6B000000>; /* 1712MB - DDR */
+			dma-ranges = <0x81800000 THB_SLICE_1_UPPER32BITS_ADDR 0x81800000 0x13600000>, /* 310MB - DDR */
+				     <0x95000000 THB_SLICE_1_UPPER32BITS_ADDR 0x95000000 0x6B000000>; /* 1712MB - DDR */
+
+			slice1_ipc: ipc@203300f0 {
+				compatible = "intel,keembay-ipc";
+				reg = <0x203300f0 0x310>, /* ARM TIM FIFO */
+				      <0x208200f0 0x310>; /* MSS TIM FIFO */
+				reg-names = "css_fifo", "mss_fifo";
+				/* GIC interrupt number 880 (848 + 32). */
+				interrupts = <GIC_SPI 848 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "css_fifo";
+				memory-region = <&slice1_css_ipc_reserved>,
+						<&slice1_mss_ipc_reserved>;
+				/*
+				 * TODO: Re-enable the following clock
+				 * definition and update it to the correct
+				 * value once SCMI clocks are support in ATF.
+				 */
+				//clocks = <&scmi_clk KEEM_BAY_A53_TIM>;
+			};
+
+			slice1_vpuipc: vpu-ipc@3f00209c {
+				compatible = "intel,keembay-vpu-ipc";
+				/* NCE WDT watchdog,
+				 * NCE TIM_GEN_CONFIG,
+				 * MSS WDT watchdog,
+				 * MSS TIM_GEN_CONFIG
+				 */
+				reg = <0x3f00209c 0x10>,
+				      <0x3f003008 0x4>,
+				      <0x2082009c 0x10>,
+				      <0x20821008 0x4>;
+				reg-names = "nce_wdt",
+					    "nce_tim_cfg",
+					    "mss_wdt",
+					    "mss_tim_cfg";
+				/*
+				 * VPU IPC needs pointers to three regions:
+				 * - VPU firmware area
+				 * - VPU X509 region (shared among all slices)
+				 * - Reference to MSS IPC area
+				 */
+				memory-region = <&slice1_vpu_reserved>,
+						<&vpu_x509_reserved>,
+						<&slice1_mss_ipc_reserved>;
+				/*
+				 * TODO: rename 'cpu_clock' to 'vpu_clock' and
+				 * remove all the PLL clocks once the VPU/IPC
+				 * driver is updated.
+				 */
+				clocks = <&scmi_clk VPU2_CORE_SOC_CLK_COMPUTESS1>,
+					 <&scmi_clk VPU2_CORE_SOC_CLK_COMPUTESS1>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>;
+				clock-names = "cpu_clock",
+					      "pll_0_out_0", "pll_0_out_1",
+					      "pll_0_out_2", "pll_0_out_3",
+					      "pll_1_out_0", "pll_1_out_1",
+					      "pll_1_out_2", "pll_1_out_3",
+					      "pll_2_out_0", "pll_2_out_1",
+					      "pll_2_out_2", "pll_2_out_3";
+				/* TODO: confirm these IRQs are correct. */
+				interrupts = <GIC_SPI 880 IRQ_TYPE_LEVEL_HIGH>,
+					     <GIC_SPI 870 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "nce_wdt", "mss_wdt";
+				/*
+				 * The following is saying that we want NCE WDT
+				 * and MSS WDT configured as nn2os_irq[0] and
+				 * rt2os_irq[0].
+				 * TODO: confirm that this actually work as
+				 * intended.
+				 */
+				intel,keembay-vpu-ipc-nce-wdt-redirect = <0>;
+				intel,keembay-vpu-ipc-mss-wdt-redirect = <0>;
+				/*
+				 * TODO: change the following to the right IMR
+				 * number (not used for now).
+				 */
+				intel,keembay-vpu-ipc-imr = <9>;
+				intel,keembay-vpu-ipc-id = <1>;
+				intel,keembay-ipc = <&slice1_ipc>;
+				/* TODO:
+				 * Add power domain support to drivers, enable in
+				 * device tree.
+				 * power-domains =
+				 *	<&scmi_devpd KEEM_BAY_MSS_CPU_POWER_DOMAIN>;
+				 */
+			};
+
+			xlink-ipc1 {
+				compatible = "intel,keembay-xlink-ipc";
+				memory-region = <&slice1_css_xlink_reserved>,
+						<&slice1_mss_xlink_reserved>,
+						<&slice1_pixel_data_cma>;
+				intel,keembay-vpu-ipc-id = <0x1>;
+				intel,keembay-vpu-ipc-name = "vpu-slice-1";
+				intel,keembay-vpu-ipc = <&slice1_vpuipc>;
+				intel,vpu-device-family = <THB_FULL_OR_PRIME>;	/* Used for SWID generation; Full=0x1, Prime=0x0 */
+			};
+
+			vpu1_mm@0 {
+				#intel,smmu_params-cells = <0x5>;
+				compatible  = "intel,vpu";
+				intel,smmu_params = <0x80000000 0x18 0x00000000 0x01800000 (IOMMU_READ|IOMMU_WRITE)>, /* 24 MB */
+						    <0x81800000 THB_SLICE_1_UPPER32BITS_ADDR 0x81800000 0x13600000 (IOMMU_READ|IOMMU_WRITE)>, /* 310 MB */
+						    <0x94E00000 0x01 0x85400000 0x200000 (IOMMU_READ|IOMMU_WRITE)>, /* 2MB */
+						    <0x95000000 THB_SLICE_1_UPPER32BITS_ADDR 0x95000000 0x6B000000 (IOMMU_READ|IOMMU_WRITE)>; /* 1712 MB */
+
+				iommus = <&vpu_smmu1 47>,
+					 <&vpu_smmu1 45>,
+					 <&vpu_smmu1 0>,
+					 <&vpu_smmu1 1>,
+					 <&vpu_smmu1 2>,
+					 <&vpu_smmu1 3>,
+					 <&vpu_smmu1 19>,
+					 <&vpu_smmu1 20>,
+					 <&vpu_smmu1 40>,
+					 <&vpu_smmu1 41>,
+					 <&vpu_smmu1 46>,
+					 <&vpu_smmu1 16>,
+					 <&vpu_smmu1 17>,
+					 <&vpu_smmu1 44>;
+			};
+                        vpusmm1 {
+				compatible = "intel,keembay-vpu-mgr";
+				memory-region = <&slice1_pixel_data_cma>;
+#if (THB_FULL_OR_PRIME)
+                                intel,keembay-vpu-ipc-id = <0x1>;
+#else
+                                intel,keembay-vpu-ipc-id = <0x0>;
+#endif
+                                intel,keembay-vpu-phys-slice-id = <0x1>;
+
+			};
+		};
+
+                media_slice1: media_slice1@285538000 {
+                         #address-cells = <0x2>;
+                         #size-cells = <0x2>;
+                         #cooling-cells = <2>;
+                         status = "okay";
+                         compatible = "thunderbay,hantro";
+                         memory-region = <&slice1_pixel_data_cma &slice1_codec_reserved>;
+                         mmu-tcu-reg = <0x2 0x85400020>;
+                         resets = <&rst_comss1 TBH_COMSS_MEDIA_VCEJ_CORERST_N>,
+			 <&rst_comss1 TBH_COMSS_MEDIA_VCEJ_ARESET_N>,
+                         <&rst_comss1 TBH_COMSS_MEDIA_VCEJ_PRESET_N>,
+                         <&rst_comss1 TBH_COMSS_MEDIA_VCE_CORERST_N>,
+                         <&rst_comss1 TBH_COMSS_MEDIA_VCE_ARESET_N>,
+                         <&rst_comss1 TBH_COMSS_MEDIA_VCE_PRESET_N>,
+                         <&rst_comss1 TBH_COMSS_MEDIA_VCDA_CORERST_N>,
+                         <&rst_comss1 TBH_COMSS_MEDIA_VCDA_ARESET_N>,
+                         <&rst_comss1 TBH_COMSS_MEDIA_VCDA_PRESET_N>,
+                         <&rst_comss1 TBH_COMSS_MEDIA_VCDB_CORERST_N>,
+                         <&rst_comss1 TBH_COMSS_MEDIA_VCDB_ARESET_N>,
+                         <&rst_comss1 TBH_COMSS_MEDIA_VCDB_PRESET_N>,
+                         <&rst_comss1 TBH_COMSS_MEDIA_TBU0_ARESET_N>,
+                         <&rst_comss1 TBH_COMSS_MEDIA_TBU1_ARESET_N>,
+                         <&rst_comss1 TBH_COMSS_MEDIA_TBU2_ARESET_N>,
+                         <&rst_comss1 TBH_COMSS_MEDIA_TBU3_ARESET_N>,
+                         <&rst_comss1 TBH_COMSS_MEDIA_TBU4_ARESET_N>,
+                         <&rst_comss1 TBH_COMSS_MEDIA_TCU_ARESET_N>,
+                         <&rst_comss1 TBH_COMSS_MEDIA_DTI_ARESET_N>;
+                         reset-names = "vcej_reset_core1",
+                         "vcej_reset_areset1",
+                         "vcej_reset_preset1",
+                         "vce_reset_core1",
+                         "vce_reset_areset1",
+                         "vce_reset_preset1",
+                         "vcda_reset_core1",
+                         "vcda_reset_areset1",
+                         "vcda_reset_preset1",
+                         "vcdb_reset_core1",
+                         "vcdb_reset_areset1",
+                         "vcdb_reset_preset1",
+                         "tbu0_areset1",
+                         "tbu1_areset1",
+                         "tbu2_areset1",
+                         "tbu3_areset1",
+                         "tbu4_areset1",
+                         "tcu_areset1",
+                         "dti_areset1";
+
+                         clocks = <&scmi_clk VC8000EJ_SUBSYS_CORECLK_VCEJ_COMPUTESS1>,
+                         <&scmi_clk VC8000EJ_SUBSYS_ACLK_COMPUTESS1>,
+                         <&scmi_clk VC8000E_SUBSYS_CORECLK_VCE_COMPUTESS1>,
+                         <&scmi_clk VC8000E_SUBSYS_ACLK_COMPUTESS1>,
+                         <&scmi_clk VC8000D_A_SUBSYS_CORECLK_VCD_COMPUTESS1>,
+                         <&scmi_clk VC8000D_A_SUBSYS_ACLK_COMPUTESS1>,
+                         <&scmi_clk VC8000D_B_SUBSYS_CORECLK_VCD_COMPUTESS1>,
+                         <&scmi_clk VC8000D_B_SUBSYS_ACLK_COMPUTESS1>;
+                         clock-names = "vc8000ej_coreclk_computess1",
+                         "vc8000ej_aclk_computess1",
+                         "vc8000e_coreclk_computess1",
+                         "vc8000e_aclk_computess1",
+                         "vc8000da_coreclk_computess1",
+                         "vc8000da_aclk_computess1",
+                         "vc8000db_coreclk_computess1",
+                         "vc8000db_aclk_computess1";
+                         encoderA1@285538000 {
+                                reg = <0x2 0x85538000 0x0 0x7D0>;
+                                reg-names = "reg-encA1";
+                                // GIC interrupt number: 652 (620 + 32).
+                                interrupts = <0x0 620 0x4>;
+                                interrupt-names = "irq-encA1";
+                                status = "okay";
+                                dec400encA1@285530000 {
+                                     #address-cells = <0x2>;
+                                     #size-cells = <0x2>;
+                                     reg = <0x2 0x85530000 0x0 0x1880>;
+                                     reg-names = "reg-dec400encA1";
+                                     // GIC interrupt number: 651 (619 + 32).
+                                     interrupts = <0 619 0x4>;
+                                     interrupt-names = "irq-dec400encA1";
+                                     status = "okay";
+                                };
+                        };
+
+                        encoderB1@285539000 {
+                                reg = <0x2 0x85539000 0x0 0x7D0>;
+                                reg-names = "reg-encB1";
+                                // GIC interrupt number: 650 (618 + 32).
+                                interrupts = <0x0 618 0x4>;
+                                interrupt-names = "irq-encB1";
+                                status = "okay";
+                                dec400encB1@285532000 {
+                                     #address-cells = <0x2>;
+                                     #size-cells = <0x2>;
+                                     reg = <0x2 0x85532000 0x0 0x1880>;
+                                     reg-names = "reg-dec400encB1";
+                                     // GIC interrupt number: 649 (617 + 32).
+                                     interrupts = <0 617 0x4>;
+                                     interrupt-names = "irq-dec400encB1";
+                                     status = "okay";
+                               };
+                        };
+
+                        encoderC1@28553C000 {
+                                reg = <0x2 0x8553C000 0x0 0x7D0>;
+                                reg-names = "reg-encC1";
+                                // GIC interrupt number: 623 (591 + 32).
+                                interrupts = <0x0 591 0x4>;
+                                interrupt-names = "irq-encC1";
+                                status = "okay";
+                        };
+
+                        decoderA1@28553A000 {
+                                #address-cells = <0x2>;
+                                #size-cells = <0x2>;
+                                reg = <0x2 0x8553A000 0x0 0x650>;
+                                reg-names = "reg-decA1";
+                                // GIC interrupt number: 648 (616 + 32).
+                                interrupts = <0x0 616 0x4>;
+                                interrupt-names = "irq-decA1";
+                                status = "okay";
+                                dec400decA1@285534000 {
+                                     #address-cells = <0x2>;
+                                     #size-cells = <0x2>;
+                                     reg = <0x2 0x85534000 0x0 0x1900>;
+                                     reg-names = "reg-dec400decA1";
+                                     // GIC interrupt number: 646 (614 + 32).
+                                     interrupts = <0 614 0x4>;
+                                     interrupt-names = "irq-dec400decA1";
+                                     status = "okay";
+                                };
+
+                                cache_VC8000D_0_DIRRD@28553D000 {
+                                        #address-cells = <0x2>;
+                                        #size-cells = <0x2>;
+                                        reg = <0x2 0x8553d000 0x0 0x180>;
+                                        reg-names = "reg-cachedecA10";
+                                        interrupts = <0x0 0x267 0x4>;
+                                        interrupt-names = "irq-cachedecA10";
+                                        status = "okay";
+                                };
+
+                                cache_VC8000D_0_DIRWR@28553D000 {
+                                        #address-cells = <0x2>;
+                                        #size-cells = <0x2>;
+                                        reg = <0x2 0x8553d000 0x0 0x180>;
+                                        reg-names = "reg-cachedecA11";
+                                        interrupts = <0x0 0x267 0x4>;
+                                        interrupt-names = "irq-cachedecA11";
+                                        status = "okay";
+                                };
+                        };
+
+                        decoderB1@28553B000 {
+                                reg = <0x2 0x8553B000 0x0 0x650>;
+                                reg-names = "reg-decB1";
+                                // GIC interrupt number: 645 (613 + 32).
+                                interrupts = <0x0 613 0x4>;
+                                interrupt-names = "irq-decB1";
+                                status = "okay";
+                                dec400decB1@285536000 {
+                                     #address-cells = <0x2>;
+                                     #size-cells = <0x2>;
+                                     reg = <0x2 0x85536000 0x0 0x1900>;
+                                     reg-names = "reg-dec400decB1";
+                                     // GIC interrupt number: 643 (611 + 32).
+                                     interrupts = <0 611 0x4>;
+                                     interrupt-names = "irq-dec400decB1";
+                                     status = "okay";
+                                };
+
+                                cache_VC8000D_1_DIRRD@28553D800 {
+                                        #address-cells = <0x2>;
+                                        #size-cells = <0x2>;
+                                        reg = <0x2 0x8553d800 0x0 0x180>;
+                                        reg-names = "reg-cachedecB10";
+                                        interrupts = <0x0 0x264 0x4>;
+                                        interrupt-names = "irq-cachedecB10";
+                                        status = "okay";
+                                };
+
+                                cache_VC8000D_1_DIRWR@28553D800 {
+                                        #address-cells = <0x2>;
+                                        #size-cells = <0x2>;
+                                        reg = <0x2 0x8553d800 0x0 0x180>;
+                                        reg-names = "reg-cachedecB11";
+                                        interrupts = <0x0 0x264 0x4>;
+                                        interrupt-names = "irq-cachedecB11";
+                                        status = "okay";
+                                };
+                         };
+                 };
+#endif
+#if (THB_SLICE_2_EN)
+
+		vpu_smmu2: iommu@320d00000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x03 0x20d00000 0x0 0x100000>;
+			#iommu-cells = <0x1>;
+			status = "disabled";
+		};
+
+		vpu_slice2 {
+			/*
+			 * This node is used to define the devices related to
+			 * slice 2.
+			 *
+			 * Here we define the VPU -> CPU mapping as follows:
+			 * 0x0000_0000:0x7FFF_FFFF -> 0x03_0000_0000:0x03_7FFFF_FFFF
+			 * 0x8180_0000:0xFFFF_FFFF -> 0x15_8180_0000:0x15_FFFF_FFFF
+			 *
+			 * This allows to express the addresses in child nodes
+			 * as VPU addresses (Linux will automatically convert
+			 * them to CPU addresses).
+			 *
+			 * We set #address-cells and #size-cells to 1 since VPU
+			 * addresses are 32-bit long.
+			 */
+			compatible = "simple-bus";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0x00000000 0x03 0x00000000 0x80000000>, /* 2GB */
+				 <0x80000000 0x18 0x00000000 0x01800000>, /* 24MB - CSRAM */
+				 <0x81800000 THB_SLICE_2_UPPER32BITS_ADDR 0x81800000 0x13600000>, /* 310MB - DDR */
+				 <0x94E00000 0x01 0x85400000 0x200000>, /* 2MB - VPU CPR */
+				 <0x95000000 THB_SLICE_2_UPPER32BITS_ADDR 0x95000000 0x6B000000>; /* 1712MB - DDR */
+			dma-ranges = <0x81800000 THB_SLICE_2_UPPER32BITS_ADDR 0x81800000 0x13600000>, /* 310MB - DDR */
+				     <0x95000000 THB_SLICE_2_UPPER32BITS_ADDR 0x95000000 0x6B000000>; /* 1712MB - DDR */
+
+			slice2_ipc: ipc@203300f0 {
+				compatible = "intel,keembay-ipc";
+				reg = <0x203300f0 0x310>, /* ARM TIM FIFO */
+				      <0x208200f0 0x310>; /* MSS TIM FIFO */
+				reg-names = "css_fifo", "mss_fifo";
+				/* GIC interrupt number 822 (790 + 32). */
+				interrupts = <GIC_SPI 790 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "css_fifo";
+				memory-region = <&slice2_css_ipc_reserved>,
+						<&slice2_mss_ipc_reserved>;
+				/*
+				 * TODO: Re-enable the following clock
+				 * definition and update it to the correct
+				 * value once SCMI clocks are support in ATF.
+				 */
+				//clocks = <&scmi_clk KEEM_BAY_A53_TIM>;
+			};
+
+			slice2_vpuipc: vpu-ipc@3f00209c {
+				compatible = "intel,keembay-vpu-ipc";
+				reg = <0x3f00209c 0x10>,
+				      <0x3f003008 0x4>,
+				      <0x2082009c 0x10>,
+				      <0x20821008 0x4>;
+				reg-names = "nce_wdt",
+					    "nce_tim_cfg",
+					    "mss_wdt",
+					    "mss_tim_cfg";
+				/*
+				 * VPU IPC needs pointers to three regions:
+				 * - VPU firmware area
+				 * - VPU X509 region (shared among all slices)
+				 * - Reference to MSS IPC area
+				 */
+				memory-region = <&slice2_vpu_reserved>,
+						<&vpu_x509_reserved>,
+						<&slice2_mss_ipc_reserved>;
+				/*
+				 * TODO: rename 'cpu_clock' to 'vpu_clock' and
+				 * remove all the PLL clocks once the VPU/IPC
+				 * driver is updated.
+				 */
+				clocks = <&scmi_clk VPU2_CORE_SOC_CLK_COMPUTESS2>,
+					 <&scmi_clk VPU2_CORE_SOC_CLK_COMPUTESS2>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>;
+				clock-names = "cpu_clock",
+					      "pll_0_out_0", "pll_0_out_1",
+					      "pll_0_out_2", "pll_0_out_3",
+					      "pll_1_out_0", "pll_1_out_1",
+					      "pll_1_out_2", "pll_1_out_3",
+					      "pll_2_out_0", "pll_2_out_1",
+					      "pll_2_out_2", "pll_2_out_3";
+				/* TODO: confirm these IRQs are correct. */
+				interrupts = <GIC_SPI 822 IRQ_TYPE_LEVEL_HIGH>,
+					     <GIC_SPI 812 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "nce_wdt", "mss_wdt";
+				/*
+				 * The following is saying that we want NCE WDT
+				 * and MSS WDT configured as nn2os_irq[0] and
+				 * rt2os_irq[0].
+				 * TODO: confirm that this actually work as
+				 * intended.
+				 */
+				intel,keembay-vpu-ipc-nce-wdt-redirect = <0>;
+				intel,keembay-vpu-ipc-mss-wdt-redirect = <0>;
+				/*
+				 * TODO: change the following to the right IMR
+				 * number (not used for now).
+				 */
+				intel,keembay-vpu-ipc-imr = <9>;
+				intel,keembay-vpu-ipc-id = <2>;
+				intel,keembay-ipc = <&slice2_ipc>;
+				/* TODO:
+				 * Add power domain support to drivers, enable in
+				 * device tree.
+				 * power-domains =
+				 *	<&scmi_devpd KEEM_BAY_MSS_CPU_POWER_DOMAIN>;
+				 */
+			};
+
+			xlink-ipc2 {
+				compatible = "intel,keembay-xlink-ipc";
+				memory-region = <&slice2_css_xlink_reserved>,
+						<&slice2_mss_xlink_reserved>,
+						<&slice2_pixel_data_cma>;
+				intel,keembay-vpu-ipc-id = <0x2>;
+				intel,keembay-vpu-ipc-name = "vpu-slice-2";
+				intel,keembay-vpu-ipc = <&slice2_vpuipc>;
+				intel,vpu-device-family = <THB_FULL_OR_PRIME>;	/* Used for SWID generation; Full=0x1, Prime=0x0 */
+			};
+
+			vpu2_mm@0 {
+				#intel,smmu_params-cells = <0x5>;
+				compatible  = "intel,vpu";
+				intel,smmu_params = <0x80000000 0x18 0x00000000 0x01800000 (IOMMU_READ|IOMMU_WRITE)>, /* 24 MB */
+						    <0x81800000 THB_SLICE_2_UPPER32BITS_ADDR 0x81800000 0x13600000 (IOMMU_READ|IOMMU_WRITE)>, /* 310 MB */
+						    <0x94E00000 0x01 0x85400000 0x200000 (IOMMU_READ|IOMMU_WRITE)>, /* 2 MB */
+						    <0x95000000 THB_SLICE_2_UPPER32BITS_ADDR 0x95000000 0x6B000000 (IOMMU_READ|IOMMU_WRITE)>; /* 1712 MB */
+
+				iommus = <&vpu_smmu2 47>,
+					 <&vpu_smmu2 45>,
+					 <&vpu_smmu2 0>,
+					 <&vpu_smmu2 1>,
+					 <&vpu_smmu2 2>,
+					 <&vpu_smmu2 3>,
+					 <&vpu_smmu2 19>,
+					 <&vpu_smmu2 20>,
+					 <&vpu_smmu2 40>,
+					 <&vpu_smmu2 41>,
+					 <&vpu_smmu2 46>,
+					 <&vpu_smmu2 16>,
+					 <&vpu_smmu2 17>,
+					 <&vpu_smmu2 44>;
+			};
+                        vpusmm2 {
+				compatible = "intel,keembay-vpu-mgr";
+				memory-region = <&slice2_pixel_data_cma>;
+#if (THB_FULL_OR_PRIME)
+                                intel,keembay-vpu-ipc-id = <0x2>;
+#else
+                                intel,keembay-vpu-ipc-id = <0x1>;
+#endif
+                                intel,keembay-vpu-phys-slice-id = <0x2>;
+
+			};
+		};
+
+		media_slice2: media_slice2@385538000 {
+                         #address-cells = <0x2>;
+                         #size-cells = <0x2>;
+                         #cooling-cells = <2>;
+                         status = "okay";
+                         compatible = "thunderbay,hantro";
+                         memory-region = <&slice2_pixel_data_cma &slice2_codec_reserved>;
+                         mmu-tcu-reg = <0x3 0x85400020>;
+                         resets = <&rst_comss2 TBH_COMSS_MEDIA_VCEJ_CORERST_N>,
+                         <&rst_comss2 TBH_COMSS_MEDIA_VCEJ_ARESET_N>,
+                         <&rst_comss2 TBH_COMSS_MEDIA_VCEJ_PRESET_N>,
+                         <&rst_comss2 TBH_COMSS_MEDIA_VCE_CORERST_N>,
+                         <&rst_comss2 TBH_COMSS_MEDIA_VCE_ARESET_N>,
+                         <&rst_comss2 TBH_COMSS_MEDIA_VCE_PRESET_N>,
+                         <&rst_comss2 TBH_COMSS_MEDIA_VCDA_CORERST_N>,
+                         <&rst_comss2 TBH_COMSS_MEDIA_VCDA_ARESET_N>,
+                         <&rst_comss2 TBH_COMSS_MEDIA_VCDA_PRESET_N>,
+                         <&rst_comss2 TBH_COMSS_MEDIA_VCDB_CORERST_N>,
+                         <&rst_comss2 TBH_COMSS_MEDIA_VCDB_ARESET_N>,
+                         <&rst_comss2 TBH_COMSS_MEDIA_VCDB_PRESET_N>,
+                         <&rst_comss2 TBH_COMSS_MEDIA_TBU0_ARESET_N>,
+                         <&rst_comss2 TBH_COMSS_MEDIA_TBU1_ARESET_N>,
+                         <&rst_comss2 TBH_COMSS_MEDIA_TBU2_ARESET_N>,
+                         <&rst_comss2 TBH_COMSS_MEDIA_TBU3_ARESET_N>,
+                         <&rst_comss2 TBH_COMSS_MEDIA_TBU4_ARESET_N>,
+                         <&rst_comss2 TBH_COMSS_MEDIA_TCU_ARESET_N>,
+                         <&rst_comss2 TBH_COMSS_MEDIA_DTI_ARESET_N>;
+                         reset-names = "vcej_reset_core2",
+                         "vcej_reset_areset2",
+                         "vcej_reset_preset2",
+                         "vce_reset_core2",
+                         "vce_reset_areset2",
+                         "vce_reset_preset2",
+                         "vcda_reset_core2",
+                         "vcda_reset_areset2",
+                         "vcda_reset_preset2",
+                         "vcdb_reset_core2",
+                         "vcdb_reset_areset2",
+                         "vcdb_reset_preset2",
+                         "tbu0_areset2",
+                         "tbu1_areset2",
+                         "tbu2_areset2",
+                         "tbu3_areset2",
+                         "tbu4_areset2",
+                         "tcu_areset2",
+                         "dti_areset2";
+                         clocks = <&scmi_clk VC8000EJ_SUBSYS_CORECLK_VCEJ_COMPUTESS2>,
+                         <&scmi_clk VC8000EJ_SUBSYS_ACLK_COMPUTESS2>,
+                         <&scmi_clk VC8000E_SUBSYS_CORECLK_VCE_COMPUTESS2>,
+                         <&scmi_clk VC8000E_SUBSYS_ACLK_COMPUTESS2>,
+                         <&scmi_clk VC8000D_A_SUBSYS_CORECLK_VCD_COMPUTESS2>,
+                         <&scmi_clk VC8000D_A_SUBSYS_ACLK_COMPUTESS2>,
+                         <&scmi_clk VC8000D_B_SUBSYS_CORECLK_VCD_COMPUTESS2>,
+                         <&scmi_clk VC8000D_B_SUBSYS_ACLK_COMPUTESS2>;
+                         clock-names = "vc8000ej_coreclk_computess2",
+                         "vc8000ej_aclk_computess2",
+                         "vc8000e_coreclk_computess2",
+                         "vc8000e_aclk_computess2",
+                         "vc8000da_coreclk_computess2",
+                         "vc8000da_aclk_computess2",
+                         "vc8000db_coreclk_computess2",
+                         "vc8000db_aclk_computess2";
+
+                         encoderA2@385538000 {
+                                reg = <0x3 0x85538000 0x0 0x7D0>;
+                                reg-names = "reg-encA2";
+                                // GIC interrupt number: 621 (589 + 32).
+                                interrupts = <0x0 589 0x4>;
+                                interrupt-names = "irq-encA2";
+                                status = "okay";
+                                dec400encA2@385530000 {
+                                     #address-cells = <0x2>;
+                                     #size-cells = <0x2>;
+                                     reg = <0x3 0x85530000 0x0 0x1880>;
+                                     reg-names = "reg-dec400encA2";
+                                     // GIC interrupt number: 620(588 + 32).
+                                     interrupts = <0 588 0x4>;
+                                     interrupt-names = "irq-dec400enA2";
+                                     status = "okay";
+                                };
+                        };
+
+                        encoderB2@385539000 {
+                                reg = <0x3 0x85539000 0x0 0x7D0>;
+                                reg-names = "reg-encB2";
+                                // GIC interrupt number: 619 (587 + 32).
+                                interrupts = <0x0 587 0x4>;
+                                interrupt-names = "irq-encB2";
+                                status = "okay";
+                                dec400encB2@385532000 {
+                                     #address-cells = <0x2>;
+                                     #size-cells = <0x2>;
+                                     reg = <0x3 0x85532000 0x0 0x1880>;
+                                     reg-names = "reg-dec400encB2";
+                                     //IC interrupt number: 618 (586 + 32).
+                                     interrupts = <0 586 0x4>;
+                                     interrupt-names = "irq-dec400encB2";
+                                     status = "okay";
+                                };
+                        };
+
+                        encoderC2@38553C000 {
+                                reg = <0x3 0x8553C000 0x0 0x7D0>;
+                                reg-names = "reg-encC2";
+                                // GIC interrupt number: 592 (560 + 32).
+                                interrupts = <0x0 560 0x4>;
+                                interrupt-names = "irq-encC2";
+                                status = "okay";
+                        };
+
+                        decoderA2@38553A000 {
+                                #address-cells = <0x2>;
+                                #size-cells = <0x2>;
+                                reg = <0x3 0x8553A000 0x0 0x650>;
+                                reg-names = "reg-decA2";
+                                // GIC interrupt number: 617 (585 + 32).
+                                interrupts = <0x0 585 0x4>;
+                                interrupt-names = "irq-decA2";
+                                status = "okay";
+                                dec400decA2@385534000 {
+                                     #address-cells = <0x2>;
+                                     #size-cells = <0x2>;
+                                     reg = <0x3 0x85534000 0x0 0x1900>;
+                                     reg-names = "reg-dec400decA2";
+                                     // GIC interrupt number: 615 (583 + 32).
+                                     interrupts = <0 583 0x4>;
+                                     interrupt-names = "irq-dec400decA2";
+                                     status = "okay";
+                                };
+
+                                cache_VC8000D_0_DIRRD@38553D000 {
+                                        #address-cells = <0x2>;
+                                        #size-cells = <0x2>;
+                                        reg = <0x3 0x8553d000 0x0 0x180>;
+                                        reg-names = "reg-cachedecA20";
+                                        interrupts = <0x0 0x248 0x4>;
+                                        interrupt-names = "irq-cachedecA20";
+                                        status = "okay";
+                                };
+
+                                cache_VC8000D_0_DIRWR@38553D000 {
+                                        #address-cells = <0x2>;
+                                        #size-cells = <0x2>;
+                                        reg = <0x3 0x8553d000 0x0 0x180>;
+                                        reg-names = "reg-cachedecA21";
+                                        interrupts = <0x0 0x248 0x4>;
+                                        interrupt-names = "irq-cachedecA21";
+                                        status = "okay";
+                                };
+                        };
+
+                        decoderB2@38553B000 {
+                                reg = <0x3 0x8553B000 0x0 0x650>;
+                                reg-names = "reg-decB2";
+                                // GIC interrupt number: 614 (582 + 32).
+                                interrupts = <0x0 582 0x4>;
+                                interrupt-names = "irq-decB2";
+                                status = "okay";
+                                dec400decB2@385536000 {
+                                     #address-cells = <0x2>;
+                                     #size-cells = <0x2>;
+                                     reg = <0x3 0x85536000 0x0 0x1900>;
+                                     reg-names = "reg-dec400decB2";
+                                     // GIC interrupt number: 612 (580 + 32).
+                                     interrupts = <0 580 0x4>;
+                                     interrupt-names = "irq-dec400decB2";
+                                     status = "okay";
+                                };
+
+                                cache_VC8000D_1_DIRRD@38553D800 {
+                                        #address-cells = <0x2>;
+                                        #size-cells = <0x2>;
+                                        reg = <0x3 0x8553d800 0x0 0x180>;
+                                        reg-names = "reg-cachedecB20";
+                                        interrupts = <0x0 0x245 0x4>;
+                                        interrupt-names = "irq-cachedecB20";
+                                        status = "okay";
+                                };
+
+                                cache_VC8000D_1_DIRWR@38553D800 {
+                                        #address-cells = <0x2>;
+                                        #size-cells = <0x2>;
+                                        reg = <0x3 0x8553d800 0x0 0x180>;
+                                        reg-names = "reg-cachedecB21";
+                                        interrupts = <0x0 0x245 0x4>;
+                                        interrupt-names = "irq-cachedecB21";
+                                        status = "okay";
+                                };
+                         };
+                 };
+
+#endif
+#if (THB_SLICE_3_EN)
+
+		vpu_smmu3: iommu@420d00000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x04 0x20d00000 0x0 0x100000>;
+			#iommu-cells = <0x1>;
+			status = "disabled";
+		};
+
+		vpu_slice3 {
+			/*
+			 * This node is used to define the devices related to
+			 * slice 3.
+			 *
+			 * Here we define the VPU -> CPU mapping as follows:
+			 * 0x0000_0000:0x7FFF_FFFF -> 0x04_0000_0000:0x04_7FFFF_FFFF
+			 * 0x8180_0000:0xFFFF_FFFF -> 0x17_8180_0000:0x17_FFFF_FFFF
+			 *
+			 * This allows to express the addresses in child nodes
+			 * as VPU addresses (Linux will automatically convert
+			 * them to CPU addresses).
+			 *
+			 * We set #address-cells and #size-cells to 1 since VPU
+			 * addresses are 32-bit long.
+			 */
+			compatible = "simple-bus";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0x00000000 0x04 0x00000000 0x80000000>, /* 2GB */
+				 <0x80000000 0x18 0x00000000 0x01800000>, /* 24MB - CSRAM */
+				 <0x81800000 THB_SLICE_3_UPPER32BITS_ADDR 0x81800000 0x13600000>, /* 310MB - DDR */
+				 <0x94E00000 0x01 0x85400000 0x200000>, /* 2MB - VPU CPR */
+				 <0x95000000 THB_SLICE_3_UPPER32BITS_ADDR 0x95000000 0x6B000000>; /* 1712MB - DDR */
+			dma-ranges = <0x81800000 THB_SLICE_3_UPPER32BITS_ADDR 0x81800000 0x13600000>, /* 310MB - DDR */
+				     <0x95000000 THB_SLICE_3_UPPER32BITS_ADDR 0x95000000 0x6B000000>; /* 1712MB - DDR */
+
+			slice3_ipc: ipc@203300f0 {
+				compatible = "intel,keembay-ipc";
+				reg = <0x203300f0 0x310>, /* ARM TIM FIFO */
+				      <0x208200f0 0x310>; /* MSS TIM FIFO */
+				reg-names = "css_fifo", "mss_fifo";
+				/* GIC interrupt number 764 (732 + 32). */
+				interrupts = <GIC_SPI 732 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "css_fifo";
+				memory-region = <&slice3_css_ipc_reserved>,
+						<&slice3_mss_ipc_reserved>;
+				/*
+				 * TODO: Re-enable the following clock
+				 * definition and update it to the correct
+				 * value once SCMI clocks are support in ATF.
+				 */
+				//clocks = <&scmi_clk KEEM_BAY_A53_TIM>;
+			};
+
+			slice3_vpuipc: vpu-ipc@3f00209c {
+				compatible = "intel,keembay-vpu-ipc";
+				reg = <0x3f00209c 0x10>,
+				      <0x3f003008 0x4>,
+				      <0x2082009c 0x10>,
+				      <0x20821008 0x4>;
+				reg-names = "nce_wdt",
+					    "nce_tim_cfg",
+					    "mss_wdt",
+					    "mss_tim_cfg";
+				/*
+				 * VPU IPC needs pointers to three regions:
+				 * - VPU firmware area
+				 * - VPU X509 region (shared among all slices)
+				 * - Reference to MSS IPC area
+				 */
+				memory-region = <&slice3_vpu_reserved>,
+						<&vpu_x509_reserved>,
+						<&slice3_mss_ipc_reserved>;
+				/*
+				 * TODO: rename 'cpu_clock' to 'vpu_clock' and
+				 * remove all the PLL clocks once the VPU/IPC
+				 * driver is updated.
+				 */
+				clocks = <&scmi_clk VPU2_CORE_SOC_CLK_COMPUTESS3>,
+					 <&scmi_clk VPU2_CORE_SOC_CLK_COMPUTESS3>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>,
+					 <&fixed_rate_emu_10mhz>;
+				clock-names = "cpu_clock",
+					      "pll_0_out_0", "pll_0_out_1",
+					      "pll_0_out_2", "pll_0_out_3",
+					      "pll_1_out_0", "pll_1_out_1",
+					      "pll_1_out_2", "pll_1_out_3",
+					      "pll_2_out_0", "pll_2_out_1",
+					      "pll_2_out_2", "pll_2_out_3";
+				/* TODO: confirm these IRQs are correct. */
+				interrupts = <GIC_SPI 764 IRQ_TYPE_LEVEL_HIGH>,
+					     <GIC_SPI 754 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "nce_wdt", "mss_wdt";
+				/*
+				 * The following is saying that we want NCE WDT
+				 * and MSS WDT configured as nn2os_irq[0] and
+				 * rt2os_irq[0].
+				 * TODO: confirm that this actually work as
+				 * intended.
+				 */
+				intel,keembay-vpu-ipc-nce-wdt-redirect = <0>;
+				intel,keembay-vpu-ipc-mss-wdt-redirect = <0>;
+				/*
+				 * TODO: change the following to the right IMR
+				 * number (not used for now).
+				 */
+				intel,keembay-vpu-ipc-imr = <9>;
+				intel,keembay-vpu-ipc-id = <3>;
+				intel,keembay-ipc = <&slice3_ipc>;
+				/* TODO:
+				 * Add power domain support to drivers, enable in
+				 * device tree.
+				 * power-domains =
+				 *	<&scmi_devpd KEEM_BAY_MSS_CPU_POWER_DOMAIN>;
+				 */
+			};
+
+			xlink-ipc3 {
+				compatible = "intel,keembay-xlink-ipc";
+				memory-region = <&slice3_css_xlink_reserved>,
+						<&slice3_mss_xlink_reserved>,
+						<&slice3_pixel_data_cma>;
+				intel,keembay-vpu-ipc-id = <0x3>;
+				intel,keembay-vpu-ipc-name = "vpu-slice-3";
+				intel,keembay-vpu-ipc = <&slice3_vpuipc>;
+				intel,vpu-device-family = <THB_FULL_OR_PRIME>;	/* Used for SWID generation; Full=0x1, Prime=0x0 */
+			};
+
+			vpu3_mm@0 {
+				#intel,smmu_params-cells = <0x5>;
+				compatible  = "intel,vpu";
+				intel,smmu_params = <0x80000000 0x18 0x00000000 0x01800000 (IOMMU_READ|IOMMU_WRITE)>, /* 24 MB */
+						    <0x81800000 THB_SLICE_3_UPPER32BITS_ADDR 0x81800000 0x13600000 (IOMMU_READ|IOMMU_WRITE)>, /* 310 MB */
+						    <0x94E00000 0x01 0x85400000 0x200000 (IOMMU_READ|IOMMU_WRITE)>, /* 2 MB */
+						    <0x95000000 THB_SLICE_3_UPPER32BITS_ADDR 0x95000000 0x6B000000 (IOMMU_READ|IOMMU_WRITE)>; /* 1712 MB */
+
+				iommus = <&vpu_smmu3 47>,
+					 <&vpu_smmu3 45>,
+					 <&vpu_smmu3 0>,
+					 <&vpu_smmu3 1>,
+					 <&vpu_smmu3 2>,
+					 <&vpu_smmu3 3>,
+					 <&vpu_smmu3 19>,
+					 <&vpu_smmu3 20>,
+					 <&vpu_smmu3 40>,
+					 <&vpu_smmu3 41>,
+					 <&vpu_smmu3 46>,
+					 <&vpu_smmu3 16>,
+					 <&vpu_smmu3 17>,
+					 <&vpu_smmu3 44>;
+			};
+                        vpusmm3 {
+				compatible = "intel,keembay-vpu-mgr";
+				memory-region = <&slice3_pixel_data_cma>;
+#if (THB_FULL_OR_PRIME)
+                                intel,keembay-vpu-ipc-id = <0x3>;
+#else
+                                intel,keembay-vpu-ipc-id = <0x1>;
+#endif
+                                intel,keembay-vpu-phys-slice-id = <0x3>;
+			};
+		};
+
+		media_slice3: media_slice3@485538000 {
+                         #address-cells = <0x2>;
+                         #size-cells = <0x2>;
+                         #cooling-cells = <2>;
+                         status = "okay";
+                         compatible = "thunderbay,hantro";
+                         memory-region = <&slice3_pixel_data_cma &slice3_codec_reserved>;
+                         mmu-tcu-reg = <0x4 0x85400020>;
+                         resets = <&rst_comss3 TBH_COMSS_MEDIA_VCEJ_CORERST_N>,
+                         <&rst_comss3 TBH_COMSS_MEDIA_VCEJ_ARESET_N>,
+                         <&rst_comss3 TBH_COMSS_MEDIA_VCEJ_PRESET_N>,
+                         <&rst_comss3 TBH_COMSS_MEDIA_VCE_CORERST_N>,
+                         <&rst_comss3 TBH_COMSS_MEDIA_VCE_ARESET_N>,
+                         <&rst_comss3 TBH_COMSS_MEDIA_VCE_PRESET_N>,
+                         <&rst_comss3 TBH_COMSS_MEDIA_VCDA_CORERST_N>,
+                         <&rst_comss3 TBH_COMSS_MEDIA_VCDA_ARESET_N>,
+                         <&rst_comss3 TBH_COMSS_MEDIA_VCDA_PRESET_N>,
+                         <&rst_comss3 TBH_COMSS_MEDIA_VCDB_CORERST_N>,
+                         <&rst_comss3 TBH_COMSS_MEDIA_VCDB_ARESET_N>,
+                         <&rst_comss3 TBH_COMSS_MEDIA_VCDB_PRESET_N>,
+                         <&rst_comss3 TBH_COMSS_MEDIA_TBU0_ARESET_N>,
+                         <&rst_comss3 TBH_COMSS_MEDIA_TBU1_ARESET_N>,
+                         <&rst_comss3 TBH_COMSS_MEDIA_TBU2_ARESET_N>,
+                         <&rst_comss3 TBH_COMSS_MEDIA_TBU3_ARESET_N>,
+                         <&rst_comss3 TBH_COMSS_MEDIA_TBU4_ARESET_N>,
+                         <&rst_comss3 TBH_COMSS_MEDIA_TCU_ARESET_N>,
+                         <&rst_comss3 TBH_COMSS_MEDIA_DTI_ARESET_N>;
+                         reset-names = "vcej_reset_core3",
+                         "vcej_reset_areset3",
+                         "vcej_reset_preset3",
+                         "vce_reset_core3",
+                         "vce_reset_areset3",
+                         "vce_reset_preset3",
+                         "vcda_reset_core3",
+                         "vcda_reset_areset3",
+                         "vcda_reset_preset3",
+                         "vcdb_reset_core3",
+                         "vcdb_reset_areset3",
+                         "vcdb_reset_preset3",
+                         "tbu0_areset3",
+                         "tbu1_areset3",
+                         "tbu2_areset3",
+                         "tbu3_areset3",
+                         "tbu4_areset3",
+                         "tcu_areset3",
+                         "dti_areset3";
+                         clocks = <&scmi_clk VC8000EJ_SUBSYS_CORECLK_VCEJ_COMPUTESS3>,
+                         <&scmi_clk VC8000EJ_SUBSYS_ACLK_COMPUTESS3>,
+                         <&scmi_clk VC8000E_SUBSYS_CORECLK_VCE_COMPUTESS3>,
+                         <&scmi_clk VC8000E_SUBSYS_ACLK_COMPUTESS3>,
+                         <&scmi_clk VC8000D_A_SUBSYS_CORECLK_VCD_COMPUTESS3>,
+                         <&scmi_clk VC8000D_A_SUBSYS_ACLK_COMPUTESS3>,
+                         <&scmi_clk VC8000D_B_SUBSYS_CORECLK_VCD_COMPUTESS3>,
+                         <&scmi_clk VC8000D_B_SUBSYS_ACLK_COMPUTESS3>;
+                         clock-names = "vc8000ej_coreclk_computess3",
+                         "vc8000ej_aclk_computess3",
+                         "vc8000e_coreclk_computess3",
+                         "vc8000e_aclk_computess3",
+                         "vc8000da_coreclk_computess3",
+                         "vc8000da_aclk_computess3",
+                         "vc8000db_coreclk_computess3",
+                         "vc8000db_aclk_computess3";
+
+                         encoderA3@485538000 {
+                                reg = <0x4 0x85538000 0x0 0x7D0>;
+                                reg-names = "reg-encA3";
+                                // GIC interrupt number: 590 (558 + 32).
+                                interrupts = <0x0 558 0x4>;
+                                interrupt-names = "irq-encA3";
+                                status = "okay";
+                                dec400encA3@485530000 {
+                                     #address-cells = <0x2>;
+                                     #size-cells = <0x2>;
+                                     reg = <0x4 0x85530000 0x0 0x1880>;
+                                     reg-names = "reg-dec400encA3";
+                                     // GIC interrupt number: 589 (557 + 32).
+                                     interrupts = <0 557 0x4>;
+                                     interrupt-names = "irq-dec400encA3";
+                                     status = "okay";
+                                };
+                        };
+
+                        encoderB3@485539000 {
+                                reg = <0x4 0x85539000 0x0 0x7D0>;
+                                reg-names = "reg-encB3";
+                                // GIC interrupt number: 588 (556 + 32).
+                                interrupts = <0x0 556 0x4>;
+                                interrupt-names = "irq-encB3";
+                                status = "okay";
+                                dec400encB3@485532000 {
+                                     #address-cells = <0x2>;
+                                     #size-cells = <0x2>;
+                                     reg = <0x4 0x85532000 0x0 0x1880>;
+                                     reg-names = "reg-dec400encB3";
+                                     // GIC interrupt number: 587 (555 + 32).
+                                     interrupts = <0 555 0x4>;
+                                     interrupt-names = "irq-dec400encB3";
+                                     status = "okay";
+                                };
+                        };
+
+                        encoderC3@48553C000 {
+                                reg = <0x4 0x8553C000 0x0 0x7D0>;
+                                reg-names = "reg-encC3";
+                                // GIC interrupt number: 561 (529 + 32).
+                                interrupts = <0x0 529 0x4>;
+                                interrupt-names = "irq-encC3";
+                                status = "okay";
+                        };
+
+                        decoderA3@48553A000 {
+                                #address-cells = <0x2>;
+                                #size-cells = <0x2>;
+                                reg = <0x4 0x8553A000 0x0 0x650>;
+                                reg-names = "reg-decA3";
+                                // GIC interrupt number: 586 (554 + 32).
+                                interrupts = <0x0 554 0x4>;
+                                interrupt-names = "irq-decA3";
+                                status = "okay";
+                                dec400decA3@485534000 {
+                                     #address-cells = <0x2>;
+                                     #size-cells = <0x2>;
+                                     reg = <0x4 0x85534000 0x0 0x1900>;
+                                     reg-names = "reg-dec400decA3";
+                                     // GIC interrupt number: 584 (552 + 32).
+                                     interrupts = <0 552 0x4>;
+                                     interrupt-names = "irq-dec400decA3";
+                                     status = "okay";
+                                };
+
+                                cache_VC8000D_0_DIRRD@48553D000 {
+                                        #address-cells = <0x2>;
+                                        #size-cells = <0x2>;
+                                        reg = <0x4 0x8553d000 0x0 0x180>;
+                                        reg-names = "reg-cachedecA30";
+                                        interrupts = <0x0 0x229 0x4>;
+                                        interrupt-names = "irq-cachedecA30";
+                                        status = "okay";
+                                };
+
+                                cache_VC8000D_0_DIRWR@48553D000 {
+                                        #address-cells = <0x2>;
+                                        #size-cells = <0x2>;
+                                        reg = <0x4 0x8553d000 0x0 0x180>;
+                                        reg-names = "reg-cachedecA31";
+                                        interrupts = <0x0 0x229 0x4>;
+                                        interrupt-names = "irq-cachedecA31";
+                                        status = "okay";
+                                };
+                        };
+
+                        decoderB3@48553B000 {
+                                reg = <0x4 0x8553B000 0x0 0x650>;
+                                reg-names = "reg-decB3";
+                                // GIC interrupt number: 583 (551 + 32).
+                                interrupts = <0x0 551 0x4>;
+                                interrupt-names = "irq-decB3";
+                                status = "okay";
+                                dec400decB3@485536000 {
+                                     #address-cells = <0x2>;
+                                     #size-cells = <0x2>;
+                                     reg = <0x4 0x85536000 0x0 0x1900>;
+                                     reg-names = "reg-dec400decB3";
+                                     // GIC interrupt number: 581 (549 + 32).
+                                     interrupts = <0 549 0x4>;
+                                     interrupt-names = "irq-dec400decB3";
+                                     status = "okay";
+                                };
+
+                                cache_VC8000D_1_DIRRD@48553D800 {
+                                        #address-cells = <0x2>;
+                                        #size-cells = <0x2>;
+                                        reg = <0x4 0x8553d800 0x0 0x180>;
+                                        reg-names = "reg-cachedecB30";
+                                        interrupts = <0x0 0x226 0x4>;
+                                        interrupt-names = "irq-cachedecB30";
+                                        status = "okay";
+                                };
+
+                                cache_VC8000D_1_DIRWR@48553D800 {
+                                        #address-cells = <0x2>;
+                                        #size-cells = <0x2>;
+                                        reg = <0x4 0x8553d800 0x0 0x180>;
+                                        reg-names = "reg-cachedecB31";
+                                        interrupts = <0x0 0x226 0x4>;
+                                        interrupt-names = "irq-cachedecB31";
+                                        status = "okay";
+                                };
+                      };
+                 };
+#endif
+
+                pcie_ep: pcie_ep@82000000 {
+                        compatible = "intel,thunderbay-pcie-ep";
+                        #address-cells = <2>;
+                        #size-cells = <2>;
+			reg = <0x00 0x82000000 0x00 0x400000
+				0x20 0x00 0x00 0x1000000
+				0x00 0x828b0000 0x00 0x800000
+				0x0 0x88800000 0x0 0x10000
+				0x0 0x88808000 0x0 0x50 >;
+			reg-names = "dbi\0addr_space\0apb\0doorbell\0doorbellclr";
+                        memory-region = <
+					 #if (THB_SLICE_0_EN)
+					 &slice0_f0_pcie_bar_2 &slice0_f0_pcie_bar_4 &slice0_f1_pcie_bar_2 &slice0_f1_pcie_bar_4
+					 #endif
+					 #if (THB_SLICE_1_EN)
+					 &slice1_f2_pcie_bar_2 &slice1_f2_pcie_bar_4 &slice1_f3_pcie_bar_2 &slice1_f3_pcie_bar_4
+					 #endif
+					 #if (THB_SLICE_2_EN)
+					 &slice2_f4_pcie_bar_2 &slice2_f4_pcie_bar_4 &slice2_f5_pcie_bar_2 &slice2_f5_pcie_bar_4
+					 #endif
+					 #if (THB_SLICE_3_EN)
+					 &slice3_f6_pcie_bar_2 &slice3_f6_pcie_bar_4 &slice3_f7_pcie_bar_2 &slice3_f7_pcie_bar_4
+					 #endif
+					 #if (THB_SLICE_0_EN)
+						&slice0_arm_cma
+					 #endif
+					 #if (THB_SLICE_1_EN)
+						&slice1_arm_cma
+					 #endif
+					 #if (THB_SLICE_2_EN)
+						&slice2_arm_cma
+					 #endif
+					 #if (THB_SLICE_3_EN)
+						&slice3_arm_cma
+					 #endif
+				      >;
+                        num-lanes = <0x02>;
+                        num-ib-windows = <0x20>;
+                        num-ob-windows = <0x40>;
+                        interrupts = <0x00 0x6b 0x01 0x00 0x12a 0x01
+					/* DoorBell interrupts */
+					0x0 0x16 0x1
+					0x0 0x18 0x1
+					0x0 0x1B 0x1
+					0x0 0x1D 0x1
+					0x0 0x20 0x1
+					0x0 0x22 0x1
+					0x0 0x25 0x1
+					0x0 0x27 0x1
+					/*DMA Write interrupts */
+					0x0 0x1DC 0x1
+					0x0 0x1DD 0x1
+					0x0 0x1DE 0x1
+					0x0 0x1DF 0x1
+					0x0 0x1E0 0x1
+					0x0 0x1E1 0x1
+					0x0 0x1E2 0x1
+					0x0 0x1E3 0x1
+					/*DMA Read interrupts */
+					0x0 0x1E4 0x1
+					0x0 0x1E5 0x1
+					0x0 0x1E6 0x1
+					0x0 0x1E7 0x1
+					0x0 0x1E8 0x1
+					0x0 0x1E9 0x1
+					0x0 0x1EA 0x1
+					0x0 0x1EB 0x1>;
+                        status = "disabled";
+                        #if (THB_SLICE_0_EN) && (THB_SLICE_1_EN) && (THB_SLICE_2_EN) && (THB_SLICE_3_EN)
+                        max-functions = /bits/ 8  <8>;
+			#else
+			max-functions = /bits/ 8  <4>;
+			#endif
+                       /* dma-coherent;
+                        dma-ranges = <0x10 0x0 0x10 0x0 0x2 0x0>;*/
+                };
+
+		pcie_rc: pcie@82400000 {
+			compatible = "intel,thunderbay-pcie";
+			reg = <0x00 0x82400000 0x0 0x0400000
+			       0x00 0x828b0000 0x0 0x0010000
+			       0x00 0x82800000 0x0 0x0010000
+			       0x1C 0x00000000 0x0 0x0200000>;
+			reg-names = "dbi", "apb", "cpr", "config";
+			num-lanes = <0x1>;
+			#address-cells = <0x3>;
+			#size-cells = <0x2>;
+			device_type = "pci";
+			bus-range = <0x00 0xff>;
+			interrupts = <0x0 0x1d1 0x1>;
+			interrupt-names = "msi";
+			status = "okay";
+			ranges = <0x83000000 0x0 0x00000000 0x1C 0x01000000 0x0 0x1000000>;
+			dmas = <&axi_dma0 0>;
+			dma-names = "rx";
+		};
+
+		ras@88831000 {
+			compatible = "intel,xbay-ras";
+			reg = < 0x00 0x88831000 0x0 0x08
+				/* Slice 0, MC [0:3], ECC Regs */
+				0x01 0x84000070 0x0 0x50 0x01 0x84100070 0x0 0x50 0x01 0x84200070 0x0 0x50 0x01 0x84300070 0x0 0x50
+				/* Slice 1, MC [0:3], ECC Regs */
+				0x02 0x84000070 0x0 0x50 0x02 0x84100070 0x0 0x50 0x02 0x84200070 0x0 0x50 0x02 0x84300070 0x0 0x50
+				/* Slice 2, MC [0:3], ECC Regs */
+				0x03 0x84000070 0x0 0x50 0x03 0x84100070 0x0 0x50 0x03 0x84200070 0x0 0x50 0x03 0x84300070 0x0 0x50
+				/* Slice 3, MC [0:3], ECC Regs */
+				0x04 0x84000070 0x0 0x50 0x04 0x84100070 0x0 0x50 0x04 0x84200070 0x0 0x50 0x04 0x84300070 0x0 0x50
+				/* CSRAM ECC Bank 0, Bank 1, Bank 2, Bank 3 Regs */
+				0x00 0x840fc000 0x0 0x30 0x00 0x84100000 0x0 0x30 0x00 0x84104000 0x0 0x30 0x00 0x84108000 0x0 0x30
+				/* CSRAM ECC Bank 4, Bank 5, Bank 6, Bank 7 Regs */
+                                0x00 0x8410c000 0x0 0x30 0x00 0x84110000 0x0 0x30 0x00 0x84114000 0x0 0x30 0x00 0x84118000 0x0 0x30 >;
+			reg-names = "ras-regs",
+				    "slice0-mc0-edac", "slice0-mc1-edac", "slice0-mc2-edac", "slice0-mc3-edac",
+				    "slice1-mc0-edac", "slice1-mc1-edac", "slice1-mc2-edac", "slice1-mc3-edac",
+				    "slice2-mc0-edac", "slice2-mc1-edac", "slice2-mc2-edac", "slice2-mc3-edac",
+				    "slice3-mc0-edac", "slice3-mc1-edac", "slice3-mc2-edac", "slice3-mc3-edac",
+				    "csram-bank0-edac", "csram-bank1-edac", "csram-bank2-edac", "csram-bank3-edac",
+				    "csram-bank4-edac", "csram-bank5-edac", "csram-bank6-edac", "csram-bank7-edac";
+			ras-num-intr = <20>;
+			ras-intr-bit-map = < 735 734 733 732  /* DDR ECC Slice 0 Interrupts */
+					     729 728 727 726  /* DDR ECC Slice 1 Interrupts */
+					     723 722 721 720  /* DDR ECC Slice 2 Interrupts */
+					     717 716 715 714  /* DDR ECC Slice 3 Interrupts */
+					     685	      /* CSRAM ECC Non-Fatal Interrupt */
+					     456 451	      /* PCIe RP SS0 & SS1 Interrupts */
+					     342 >;	      /* CSRAM ECC Fatal Interrupt */
+			status = "okay";
+			ddr-edac@184000070 {
+				compatible = "snps,ddr-edac";
+				num-slices = <4>;
+				num-mcs-per-slice = <4>;
+				interrupts = < 0 703 1>, <0 702 1>, <0 701 1>, <0 700 1>,
+					     < 0 697 1>, <0 696 1>, <0 695 1>, <0 694 1>,
+					     < 0 691 1>, <0 690 1>, <0 689 1>, <0 688 1>,
+					     < 0 685 1>, <0 684 1>, <0 683 1>, <0 682 1>;
+				interrupt-names = "slice0-mc0-edac", "slice0-mc1-edac", "slice0-mc2-edac", "slice0-mc3-edac",
+						  "slice1-mc0-edac", "slice1-mc1-edac", "slice1-mc2-edac", "slice1-mc3-edac",
+						  "slice2-mc0-edac", "slice2-mc1-edac", "slice2-mc2-edac", "slice2-mc3-edac",
+						  "slice3-mc0-edac", "slice3-mc1-edac", "slice3-mc2-edac", "slice3-mc3-edac";
+			};
+			csram-edac@840fc000 {
+				compatible = "netspeed,noc-csram-edac";
+				num-banks = <8>;
+				interrupts = < 0 310 1>, < 0 653 1>;
+				interrupt-names = "csram-edac-irq0", "csram-edac-irq1";
+			};
+			cortex-a53-edac@0 {
+				compatible = "arm,cortex-a53-edac";
+			};
+			pcie-ep-edac@0 {
+				compatible = "thb,pcie-ep-edac";
+				thb-pcie-ep = <&pcie_ep>;
+			};
+		};
+
+#if (THB_SLICE_0_EN)
+		xchalloc@0 {
+			compatible = "intel,xchannel-allocator";
+			status = "okay";
+		};
+#endif
+
+#if (THB_SLICE_1_EN)
+		xchalloc@1 {
+			compatible = "intel,xchannel-allocator";
+			status = "okay";
+		};
+#endif
+
+#if (THB_SLICE_2_EN)
+		xchalloc@2 {
+			compatible = "intel,xchannel-allocator";
+			status = "okay";
+		};
+#endif
+
+#if (THB_SLICE_3_EN)
+		xchalloc@3 {
+			compatible = "intel,xchannel-allocator";
+			status = "okay";
+		};
+#endif
+
+	};
+};
+

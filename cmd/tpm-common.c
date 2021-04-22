@@ -333,6 +333,21 @@ int do_tpm_info(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 	return 0;
 }
 
+int do_tpm_deinit(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
+{
+	struct udevice *dev;
+	int rc;
+
+	if (argc != 1)
+                return CMD_RET_USAGE;
+	rc = get_tpm(&dev);
+	if (rc)
+		return rc;
+
+        return report_return_code(tpm_deinit(dev));
+}
+
+
 int do_tpm_init(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 {
 	struct udevice *dev;

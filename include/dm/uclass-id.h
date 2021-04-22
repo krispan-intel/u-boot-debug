@@ -47,6 +47,7 @@ enum uclass_id {
 	UCLASS_DSI_HOST,	/* Display Serial Interface host */
 	UCLASS_DMA,		/* Direct Memory Access */
 	UCLASS_DSA,		/* Distributed (Ethernet) Switch Architecture */
+	UCLASS_ECDSA_ENGINE,	/* ECDSA crypto engine. */
 	UCLASS_EFI,		/* EFI managed devices */
 	UCLASS_ETH,		/* Ethernet device */
 	UCLASS_ETH_PHY,		/* Ethernet PHY device */
@@ -128,6 +129,7 @@ enum uclass_id {
 	UCLASS_W1_EEPROM,	/* one-wire EEPROMs */
 	UCLASS_WDT,		/* Watchdog Timer driver */
 	UCLASS_PVBLOCK,		/* Xen virtual block device */
+	UCLASS_XMSS_ENGINE,	/* XMSS crypto engine. */
 
 	UCLASS_COUNT,
 	UCLASS_INVALID = -1,

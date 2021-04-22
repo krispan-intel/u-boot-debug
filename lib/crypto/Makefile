@@ -3,6 +3,22 @@
 # Makefile for asymmetric cryptographic keys
 #
 
+# This Makefile is executed only if either CONFIG_ECDSA or CONFIG_XMSS (or
+# both) is enabled (see lib/Makefile); however, the files in this folder needs
+# to be added only if FIT_SIGNATURE is enabled.
+ifneq ($(CONFIG_$(SPL_)FIT_SIGNATURE),)
+obj-y += crypto-common.o
+obj-$(CONFIG_ECDSA) += ecdsa-verify.o
+obj-$(CONFIG_XMSS) += xmss-verify.o
+
+# rsa-checksum.c actually contains generic code which is needed for ECDSA FIT
+# authentication as well; therefore, enable it even if CONFIG_RSA is disabled.
+ifeq ($(CONFIG_RSA),)
+obj-$(CONFIG_$(SPL_)FIT_SIGNATURE) += ../rsa/rsa-checksum.o
+endif
+
+endif
+
 obj-$(CONFIG_ASYMMETRIC_KEY_TYPE) += asymmetric_keys.o
 
 asymmetric_keys-y := asymmetric_type.o

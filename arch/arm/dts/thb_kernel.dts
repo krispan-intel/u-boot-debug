@@ -1,0 +1,659 @@
+/*
+ * Device tree describing the Thunder Bay Virtual Platform configuration
+ * containing a single Arm core.
+ *
+ * Copyright (c) 2018 Intel Corporation.
+ *
+ * SPDX-License-Identifier: GPL-2.0
+ *
+ */
+
+/dts-v1/;
+
+#include "thb_kernel.dtsi"
+
+/ {
+	model = "Intel Thunder Bay A0";
+	compatible = "intel,thunderbay-vp";
+
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	aliases {
+		serial0 = &uart0;
+		serial1 = &uart1;
+		spi0 = &spi0;
+		spi1 = &spi1;
+		gpio0 = &gpio0;
+	};
+
+	aliases {
+		mmc0 = &mmc;
+	};
+
+	chosen {
+                //bootargs = "root=/dev/mmcblk0p5 console=uart8250,mmio32,0x80460000,115200n8  initcall_debug rootwait rw rootfstype=ext4";
+                bootargs = "mender.data=PARTLABEL=data  root=/dev/mmcblk0p5 console=uart8250,mmio32,0x80460000,115200n8  initcall_debug rootwait rw rootfstype=ext4";
+		//bootargs = "root=/dev/mem0      earlycon=uart8250,mmio32,0x80460000,115200n8  initcall_debug rootwait rw rootfstype=ramfs";
+		//stdout-path = "serial0:9600n8";
+	};
+
+#if ((THB_SLICE_0_EN) || (CRB2_4GB_SLICE_0_SUBMODULE))
+	/* 4/8GB of Slice 0 DDR memory */
+	memory@100A000000 {
+		device_type = "memory";
+#if (THB_DDR_CFG_4GB & 0x1)
+		reg = <THB_SLICE_0_UPPER32BITS_ADDR 0x0A000000 THB_DDR_SLICE0_SIZE_xGB 0x0>;
+#else
+		reg = <(THB_SLICE_0_UPPER32BITS_ADDR-0x1) 0x0A000000 THB_DDR_SLICE0_SIZE_xGB 0x0>;
+#endif
+	};
+#endif
+
+#if ((THB_SLICE_1_EN) || (CRB2_4GB_SLICE_1_SUBMODULE))
+	/* 4/8GB of Slice 1 DDR memory */
+	memory@1200000000 {
+		device_type = "memory";
+#if (THB_DDR_CFG_4GB & 0x2)
+		reg = <THB_SLICE_1_UPPER32BITS_ADDR SLICE_1_KERNEL_START_ADDR THB_DDR_SLICE1_SIZE_xGB 0x0>;
+#else
+		reg = <(THB_SLICE_1_UPPER32BITS_ADDR-0x1) SLICE_1_KERNEL_START_ADDR THB_DDR_SLICE1_SIZE_xGB 0x0>;
+#endif
+	};
+#endif
+
+#if (THB_SLICE_2_EN)
+	/* 4/8GB of Slice 2 DDR memory */
+	memory@1400000000 {
+		device_type = "memory";
+#if (THB_DDR_CFG_4GB & 0x4)
+		reg = <THB_SLICE_2_UPPER32BITS_ADDR 0x0 THB_DDR_SLICE2_SIZE_xGB 0x0>;
+#else
+		reg = <(THB_SLICE_2_UPPER32BITS_ADDR-0x1) 0x0 THB_DDR_SLICE2_SIZE_xGB 0x0>;
+#endif
+	};
+#endif
+
+#if (THB_SLICE_3_EN)
+	/* 4/8GB of Slice 3 DDR memory */
+	memory@1600000000 {
+		device_type = "memory";
+#if (THB_DDR_CFG_4GB & 0x8)
+		reg = <THB_SLICE_3_UPPER32BITS_ADDR 0x0 THB_DDR_SLICE3_SIZE_xGB 0x0>;
+#else
+		reg = <(THB_SLICE_3_UPPER32BITS_ADDR-0x1) 0x0 THB_DDR_SLICE3_SIZE_xGB 0x0>;
+#endif
+	};
+#endif
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		csram_reserved: csram_reserved@0x1800000000 {
+			compatible = "shared-dma-pool";
+			reg = <0x18 0x00000000 0x0 0x01800000>;
+			no-map;
+		};
+
+#if (THB_SLICE_0_EN)
+		slice0_reserved {
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges;
+
+			/* Reserved for VPU */
+			slice0_vpu_internel_reserved: vpu_internel_reserved@1081800000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_0_UPPER32BITS_ADDR 0x81800000 0x0 0x3000000>; /* 48MB */
+				no-map;
+			};
+
+			/* Allocate 256MB at fixed location for VPU */
+			slice0_vpu_reserved: vpu_reserved@1084800000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_0_UPPER32BITS_ADDR 0x84800000 0x0 0x10000000>; /* 256MB */
+				no-map;
+			};
+
+			/* Allocate 2MB at fixed location for MSS IPC */
+			slice0_mss_ipc_reserved: ipc_buffers@1094800000{
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_0_UPPER32BITS_ADDR 0x94800000 0x0 0x200000>;
+				no-map;
+			};
+
+			/* Allocate 2MB at fixed location for CSS IPC */
+			slice0_css_ipc_reserved: ipc_buffers@1094A00000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_0_UPPER32BITS_ADDR 0x94A00000 0x0 0x200000>;
+				no-map;
+			};
+
+			slice0_mss_xlink_reserved: mss_xlink@1094C00000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_0_UPPER32BITS_ADDR 0x94C00000 0x0 0x00100000>; /* 1MB */
+				no-map;
+			};
+
+			slice0_css_xlink_reserved: css_xlink@1094D00000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_0_UPPER32BITS_ADDR 0x94D00000 0x0 0x00100000>; /* 1MB */
+				no-map;
+			};
+/*
+			slice0_ocs_decrypt_cma: ocs_cma@1195000000 {
+				compatible = "shared-dma-pool";
+				reg = <0x11 0x95000000  0x0 0x8000000>; /* 128MB */
+/*				reusable;
+			};
+*/
+
+			slice0_codec_reserved: slice0_codec_reserved@105C200000 {
+                                compatible = "shared-dma-pool";
+                                reg = <THB_SLICE_0_UPPER32BITS_ADDR 0x5C200000 0x00 0x14E00000>; /* 334MB */
+                                no-map;
+                        };
+
+			slice0_pixel_data_cma: pixel_data_cma@1095000000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_0_UPPER32BITS_ADDR 0x95000000 0x0 0x6B000000>; /* 1712MB */
+				no-map;
+			};
+
+			slice0_f0_pcie_bar_2: slice0_f0_pcie_bar_2@1071000000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_0_UPPER32BITS_ADDR 0x71000000 0x00 0x1000000>; /* 16MB */
+				no-map;
+			};
+
+			slice0_f0_pcie_bar_4: slice0_f0_pcie_bar_4@1072000000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_0_UPPER32BITS_ADDR 0x72000000 0x00 0x800000>; /* 8MB */
+				no-map;
+			};
+
+			slice0_f1_pcie_bar_2: slice0_f1_pcie_bar_2@1072800000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_0_UPPER32BITS_ADDR 0x72800000 0x00 0x1000000>; /* 16MB */
+				no-map;
+			};
+
+			slice0_f1_pcie_bar_4: slice0_f1_pcie_bar_4@1073800000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_0_UPPER32BITS_ADDR 0x73800000 0x00 0x800000>; /* 8MB */
+				no-map;
+			};
+
+			slice0_arm_cma: arm_cma@1074000000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_0_UPPER32BITS_ADDR 0x74000000 0x0 0xC000000>; /* 192MB */
+				reusable;
+			};
+		};
+#endif
+
+#if (THB_SLICE_1_EN)
+
+		slice1_reserved {
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges;
+
+			/* Reserved for VPU */
+			slice1_vpu_internel_reserved: vpu_internel_reserved@1281800000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_1_UPPER32BITS_ADDR 0x81800000 0x0 0x3000000>; /* 48MB */
+				no-map;
+			};
+
+			/* Allocate 256MB at fixed location for VPU */
+			slice1_vpu_reserved: vpu_reserved@1284800000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_1_UPPER32BITS_ADDR 0x84800000 0x0 0x10000000>; /* 256MB */
+				no-map;
+			};
+
+			/* Allocate 2MB at fixed location for MSS IPC */
+			slice1_mss_ipc_reserved: ipc_buffers@1294800000{
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_1_UPPER32BITS_ADDR 0x94800000 0x0 0x200000>;
+				no-map;
+			};
+
+			/* Allocate 2MB at fixed location for CSS IPC */
+			slice1_css_ipc_reserved: ipc_buffers@1294A00000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_1_UPPER32BITS_ADDR 0x94A00000 0x0 0x200000>;
+				no-map;
+			};
+
+			slice1_mss_xlink_reserved: mss_xlink@1294C00000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_1_UPPER32BITS_ADDR 0x94C00000 0x0 0x00100000>; /* 1MB */
+				no-map;
+			};
+
+			slice1_css_xlink_reserved: css_xlink@1294D00000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_1_UPPER32BITS_ADDR 0x94D00000 0x0 0x00100000>; /* 1MB */
+				no-map;
+			};
+/*
+			slice1_ocs_decrypt_cma: ocs_cma@1395000000 {
+				compatible = "shared-dma-pool";
+				reg = <0x13 0x95000000  0x0 0x8000000>; /* 128 MB */
+/*				reusable;
+			};
+*/
+			slice1_codec_reserved: slice1_codec_reserved@125C200000 {
+                                compatible = "shared-dma-pool";
+                                reg = <THB_SLICE_1_UPPER32BITS_ADDR 0x5C200000 0x00 0x14E00000>; /* 334MB */
+                                no-map;
+                        };
+
+			slice1_pixel_data_cma: pixel_data_cma@1295000000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_1_UPPER32BITS_ADDR 0x95000000 0x0 0x6B000000>; /* 1712MB */
+				no-map;
+			};
+
+			slice1_f2_pcie_bar_2: slice1_f2_pcie_bar_2@1271000000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_1_UPPER32BITS_ADDR 0x71000000 0x00 0x1000000>; /* 16MB */
+				no-map;
+			};
+
+			slice1_f2_pcie_bar_4: sliec1_f2_pcie_bar_4@1272000000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_1_UPPER32BITS_ADDR 0x72000000 0x00 0x800000>; /* 8MB */
+				no-map;
+			};
+
+			slice1_f3_pcie_bar_2: slice1_f3_pcie_bar_2@1272800000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_1_UPPER32BITS_ADDR 0x72800000 0x00 0x1000000>; /* 16MB */
+				no-map;
+			};
+
+			slice1_f3_pcie_bar_4: sliec1_f3_pcie_bar_4@1273800000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_1_UPPER32BITS_ADDR 0x73800000 0x00 0x800000>;
+				no-map;
+			};
+
+			slice1_arm_cma: arm_cma@1274000000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_1_UPPER32BITS_ADDR 0x74000000 0x0 0xC000000>; /* 192MB */
+				reusable;
+			};
+		};
+#endif
+
+#if (THB_SLICE_2_EN)
+		slice2_reserved {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+			/* Reserved for VPU */
+			slice2_vpu_internel_reserved: vpu_internel_reserved@1481800000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_2_UPPER32BITS_ADDR 0x81800000 0x0 0x3000000>; /* 48MB */
+				no-map;
+			};
+
+
+			/* Allocate 256MB at fixed location for VPU */
+			slice2_vpu_reserved: vpu_reserved@1484800000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_2_UPPER32BITS_ADDR 0x84800000 0x0 0x10000000>; /* 256MB */
+				no-map;
+			};
+
+			/* Allocate 2MB at fixed location for MSS IPC */
+			slice2_mss_ipc_reserved: ipc_buffers@1494800000{
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_2_UPPER32BITS_ADDR 0x94800000 0x0 0x200000>;
+				no-map;
+			};
+
+			/* Allocate 2MB at fixed location for CSS IPC */
+			slice2_css_ipc_reserved: ipc_buffers@1494A00000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_2_UPPER32BITS_ADDR 0x94A00000 0x0 0x200000>;
+				no-map;
+			};
+
+			slice2_mss_xlink_reserved: mss_xlink@1494C00000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_2_UPPER32BITS_ADDR 0x94C00000 0x0 0x00100000>; /* 1MB */
+				no-map;
+			};
+
+			slice2_css_xlink_reserved: css_xlink@1494D00000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_2_UPPER32BITS_ADDR 0x94D00000 0x0 0x00100000>; /* 1MB */
+				no-map;
+			};
+/*
+			slice2_ocs_decrypt_cma: ocs_cma@1595000000 {
+				compatible = "shared-dma-pool";
+				reg = <0x15 0x95000000  0x0 0x8000000>; /* 128MB */
+/*				reusable;
+			};
+*/
+
+			slice2_codec_reserved: slice2_codec_reserved@145C200000 {
+                                compatible = "shared-dma-pool";
+                                reg = <THB_SLICE_2_UPPER32BITS_ADDR 0x5C200000 0x00 0x14E00000>; /* 334MB */
+                                no-map;
+                        };
+
+			slice2_pixel_data_cma: pixel_data_cma@1495000000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_2_UPPER32BITS_ADDR 0x95000000 0x0 0x6B000000>; /* 1712MB */
+				no-map;
+			};
+
+			slice2_f4_pcie_bar_2: slice2_f4_pcie_bar_2@1471000000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_2_UPPER32BITS_ADDR 0x71000000 0x00 0x1000000>; /* 16MB */
+				no-map;
+			};
+
+			slice2_f4_pcie_bar_4: sliec2_f4_pcie_bar_4@1472000000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_2_UPPER32BITS_ADDR 0x72000000 0x00 0x800000>; /* 8MB */
+				no-map;
+			};
+
+			slice2_f5_pcie_bar_2: slice2_f5_pcie_bar_2@1472800000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_2_UPPER32BITS_ADDR 0x72800000 0x00 0x1000000>; /* 16MB */
+				no-map;
+			};
+
+			slice2_f5_pcie_bar_4: sliec2_f5_pcie_bar_4@1473800000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_2_UPPER32BITS_ADDR 0x73800000 0x00 0x800000>; /* 8MB */
+				no-map;
+			};
+
+			slice2_arm_cma: arm_cma@1474000000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_2_UPPER32BITS_ADDR 0x74000000 0x0 0xC000000>; /* 192MB */
+				reusable;
+			};
+		};
+#endif
+
+#if (THB_SLICE_3_EN)
+		slice3_reserved {
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges;
+
+			/* Reserved for VPU */
+			slice3_vpu_internel_reserved: vpu_internel_reserved@1681800000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_3_UPPER32BITS_ADDR 0x81800000 0x0 0x3000000>; /* 48MB */
+				no-map;
+			};
+
+			/* Allocate 256MB at fixed location for VPU */
+			slice3_vpu_reserved: vpu_reserved@1684800000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_3_UPPER32BITS_ADDR 0x84800000 0x0 0x10000000>; /* 256MB */
+				no-map;
+			};
+
+			/* Allocate 2MB at fixed location for MSS IPC */
+			slice3_mss_ipc_reserved: ipc_buffers@1694800000{
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_3_UPPER32BITS_ADDR 0x94800000 0x0 0x200000>;
+				no-map;
+			};
+
+			/* Allocate 2MB at fixed location for CSS IPC */
+			slice3_css_ipc_reserved: ipc_buffers@1694A00000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_3_UPPER32BITS_ADDR 0x94A00000 0x0 0x200000>;
+				no-map;
+			};
+
+			slice3_mss_xlink_reserved: mss_xlink@1694C00000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_3_UPPER32BITS_ADDR 0x94C00000 0x0 0x00100000>; /* 1MB */
+				no-map;
+			};
+
+			slice3_css_xlink_reserved: css_xlink@1694D00000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_3_UPPER32BITS_ADDR 0x94D00000 0x0 0x00100000>; /* 1MB */
+				no-map;
+			};
+/*
+			slice3_ocs_decrypt_cma: ocs_cma@1795000000 {
+				compatible = "shared-dma-pool";
+				reg = <0x17 0x95000000  0x0 0x8000000>; /* 128MB */
+/*				reusable;
+			};
+*/
+			slice3_codec_reserved: slice3_codec_reserved@165C200000 {
+                                compatible = "shared-dma-pool";
+                                reg = <THB_SLICE_3_UPPER32BITS_ADDR 0x5C200000 0x00 0x14E00000>; /* 334MB */
+                                no-map;
+                        };
+
+			slice3_pixel_data_cma: pixel_data_cma@1695000000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_3_UPPER32BITS_ADDR 0x95000000 0x0 0x6B000000>; /*1712MB */
+				no-map;
+			};
+
+			slice3_f6_pcie_bar_2: slice3_f6_pcie_bar_2@1671000000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_3_UPPER32BITS_ADDR 0x71000000 0x00 0x1000000>; /* 16MB */
+				no-map;
+			};
+
+			slice3_f6_pcie_bar_4: sliec3_f6_pcie_bar_4@1672000000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_3_UPPER32BITS_ADDR 0x72000000 0x00 0x800000>; /* 8MB */
+				no-map;
+			};
+
+			slice3_f7_pcie_bar_2: slice3_f7_pcie_bar_2@1672800000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_3_UPPER32BITS_ADDR 0x72800000 0x00 0x1000000>; /* 16MB */
+				no-map;
+			};
+
+			slice3_f7_pcie_bar_4: sliec3_f7_pcie_bar_4@1673800000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_3_UPPER32BITS_ADDR 0x73800000 0x00 0x800000>; /* 8MB */
+				no-map;
+			};
+
+			slice3_arm_cma: arm_cma@1674000000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_3_UPPER32BITS_ADDR 0x74000000 0x0 0xC000000>; /*192MB */
+				reusable;
+			};
+		};
+#endif
+	};
+
+	sysmem@1008000000 {
+		compatible = "mmio-sram";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		reg = <0x10 0x08000000 0x0 0x2000000>;
+		ranges = <0 0x0  0x10 0x08000000 0x0 0x2000000>;
+
+		/*
+		* Allocate 1MB at fixed location for shared memory between
+		* non-secure world and BL31 to be used for SCMI.
+		*/
+		scmi_sec_shmem: scmi_sec_shmem@0 {
+			compatible = "arm,scmi-shmem";
+			reg = <0x0 0x0 0x0 0x100000>;
+			pool;
+		};
+
+		/*
+		* Allocate some space in shared area for VPU IPC driver
+		* to place the X509 certificate.
+		*/
+		vpu_x509_reserved: vpu_x509_reserved@100000 {
+			compatible = "shared-dma-pool";
+			reg = <0x0 0x100000 0x0 0x100000>;
+			no-map;
+		};
+
+		/* Allocate the rest of shared memory for general use.
+		 * VPU x509 certificate area will occupy/allocated
+		 * from the below region by the IPC driver. So, optee
+		 * needs to know the region for the VPU authentication
+		 * service TA. https://hsdes.intel.com/resource/16011061170
+		 */
+		general_sec_shmem: general_sec_shmem@200000 {
+			reg = <0x0 0x200000 0x0 0x600000>;
+		};
+
+		optee_tee_shmem: optee_tee_shmem@800000 {
+                       reg = <0x0 0x800000 0x0 0x1800000>;
+               };
+	};
+
+	/*
+	* For U-Boot to reference the general use shared memory
+	* area, we use this node.
+	*/
+	general_sec_shmem {
+		shmem = <&general_sec_shmem>;
+	};
+
+	fixed_rate_emu_10mhz: fixed_rate_emu_10mhz {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <50000000>;
+		clock-output-names = "dummy_clk";
+		u-boot,dm-pre-reloc;
+	};
+
+	fixed_rate_emu_200mhz: fixed_rate_emu_200mhz {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <25000000>;
+		clock-output-names = "dummy1_clk";
+		u-boot,dm-pre-reloc;
+	};
+};
+
+&uart0 {
+	status = "okay";
+};
+
+&uart1 {
+	status = "okay";
+};
+
+&emmc_phy {
+	status = "okay";
+	//clocks = <&fixed_rate_emu_200mhz>;
+	//clocks = <&scmi_clk PSS_CPR_CPR_CLK>;
+};
+
+&gpio0 {
+       status = "okay";
+};
+
+&hddl_dev {
+       status = "okay";
+};
+
+&tsens {
+       status = "okay";
+};
+
+&mmc {
+	status = "okay";
+	//clocks = <&fixed_rate_emu_200mhz>, <&fixed_rate_emu_200mhz>;
+	//clocks = <&scmi_clk EMMC_XIN_CLK>, <&scmi_clk EMMC_AXI_CLK>;
+	//assigned-clocks = <&fixed_rate_emu_200mhz>;
+	//assigned-clocks = <&scmi_clk EMMC_XIN_CLK>;
+};
+
+&ecdsa_engine {
+	/* Use general secure-world shared memory. */
+	shmem = <&general_sec_shmem>;
+};
+
+&xmss_engine {
+	/* Use general secure-world shared memory. */
+	shmem = <&general_sec_shmem>;
+};
+
+#if (THB_SLICE_0_EN)
+&vpu_smmu0 {
+	status = "okay";
+};
+#endif
+
+#if (THB_SLICE_1_EN)
+&vpu_smmu1 {
+	status = "okay";
+};
+#endif
+
+#if (THB_SLICE_2_EN)
+&vpu_smmu2 {
+	status = "okay";
+};
+#endif
+
+#if (THB_SLICE_3_EN)
+&vpu_smmu3 {
+	status = "okay";
+};
+#endif
+
+&pcie_ep {
+	status = "okay";
+};
+
+&spi0 {
+	status = "okay";
+	cs-gpios = <&gpio0 19 0>;
+
+	flash: mx25u6435f {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "spi-flash";
+		spi-max-frequency = <1000000>;
+		reg = <0x0>;
+		status = "okay";
+	};
+};
+
+&spi1 {
+	status = "okay";
+	cs-gpios = <&gpio0 23 0>;
+        /* The dTPM will be reset upon platform reset,
+         * without additional individual SPI reset control on THB CRB and VV.
+         * The CS for VV is enabled in drivers/spi/designware_spi.c.
+         * May need to revisit to keep this in DTS for ease of control. CRB doesn't CS.
+         */
+
+        tpm_tis_spi: slb9670@0 {
+                compatible = "tis,tpm2-spi", "infineon,slb9670";
+                spi-max-frequency = <0xA09E6B>;
+                reg = <0x0>;
+                /* U-Boot will enable fwTPM or dTPM at run-time */
+                /*gpio-reset = <&gpio0 49 0>;*/
+                status = "okay";
+        };
+};

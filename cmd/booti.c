@@ -75,9 +75,29 @@ static int booti_start(struct cmd_tbl *cmdtp, int flag, int argc,
 	unmap_sysmem((void *)ld);
 
 	ret = booti_setup(ld, &relocated_addr, &image_size, false);
-	if (ret != 0)
+	if (ret != 0) {
 		return 1;
+	}
 
+#if CONFIG_DM_VERITY
+	/*
+	 * Setup dm-verity boot args. Must be called with 'full_scan=true'
+	 * because the size we are passing is an overestimation of the real
+	 * image size (since it also includes the size of the kernel's .bss and
+	 * .data sections).
+	 */
+	if (verity_setup_boot_args(ld, image_size, true)) {
+		printf("ERROR: Failed to setup verity arguments.");
+		return 1;
+	}
+#endif  /* CONFIG_DM_VERITY */
+
+#if CONFIG_XLINK_SECURITY
+	if (xlink_security_setup_boot_args()) {
+		printf("ERROR: Failed to setup xlink_security arguments.");
+		return 1;
+	}
+#endif
 	/* Handle BOOTM_STATE_LOADOS */
 	if (relocated_addr != ld) {
 		printf("Moving Image from 0x%lx to 0x%lx, end=%lx\n", ld,
@@ -108,8 +128,9 @@ int do_booti(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 	/* Consume 'booti' */
 	argc--; argv++;
 
-	if (booti_start(cmdtp, flag, argc, argv, &images))
+	if (booti_start(cmdtp, flag, argc, argv, &images)) {
 		return 1;
+	}
 
 	/*
 	 * We are doing the BOOTM_STATE_LOADOS state ourselves, so must
@@ -155,6 +176,6 @@ static char booti_help_text[] =
 #endif
 
 U_BOOT_CMD(
-	booti,	CONFIG_SYS_MAXARGS,	1,	do_booti,
+	booti,  CONFIG_SYS_MAXARGS,     1,      do_booti,
 	"boot Linux kernel 'Image' format from memory", booti_help_text
-);
+	);

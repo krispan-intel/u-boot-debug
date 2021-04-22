@@ -25,6 +25,7 @@
 #include <asm/u-boot.h> /* boot information for Linux kernel */
 #include <display_options.h>
 #include <vsprintf.h>
+#include <env.h>
 #endif	/* __ASSEMBLY__ */
 
 /* Pull in stuff for the build system */

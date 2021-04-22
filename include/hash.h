@@ -7,6 +7,7 @@
 #define _HASH_H
 
 struct cmd_tbl;
+#include <u-boot/sha512.h>
 
 /*
  * Maximum digest size for all algorithms we support. Having this value

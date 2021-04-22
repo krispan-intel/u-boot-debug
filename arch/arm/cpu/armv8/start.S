@@ -317,6 +317,11 @@ ENDPROC(apply_core_errata)
 WEAK(lowlevel_init)
 	mov	x29, lr			/* Save LR */
 
+#ifdef CONFIG_PLATFORM_THUNDERBAY
+	/* Enable Serror interrupt early*/
+	msr     daifclr, #4
+#endif
+
 #if defined(CONFIG_GICV2) || defined(CONFIG_GICV3)
 	branch_if_slave x0, 1f
 	ldr	x0, =GICD_BASE

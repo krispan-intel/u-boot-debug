@@ -26,16 +26,17 @@
 #include <linux/types.h>
 #include <linux/unaligned/be_byteshift.h>
 #include <asm-generic/gpio.h>
+#include <asm/io.h>
 
 #include "tpm_tis.h"
 #include "tpm_internal.h"
 
-#define TPM_ACCESS(l)			(0x0000 | ((l) << 12))
+#define TPM_ACCESS(l)                   (0x0000 | ((l) << 12))
 #define TPM_INT_ENABLE(l)               (0x0008 | ((l) << 12))
-#define TPM_STS(l)			(0x0018 | ((l) << 12))
-#define TPM_DATA_FIFO(l)		(0x0024 | ((l) << 12))
-#define TPM_DID_VID(l)			(0x0F00 | ((l) << 12))
-#define TPM_RID(l)			(0x0F04 | ((l) << 12))
+#define TPM_STS(l)                      (0x0018 | ((l) << 12))
+#define TPM_DATA_FIFO(l)                (0x0024 | ((l) << 12))
+#define TPM_DID_VID(l)                  (0x0F00 | ((l) << 12))
+#define TPM_RID(l)                      (0x0F04 | ((l) << 12))
 
 #define MAX_SPI_FRAMESIZE 64
 
@@ -118,8 +119,9 @@ static int tpm_tis_spi_xfer(struct udevice *dev, u32 addr, const u8 *out,
 					goto release_bus;
 				}
 
-				if (rx_buf[0] & 0x1)
+				if (rx_buf[0] & 0x1) {
 					break;
+				}
 			}
 
 			if (i == TPM_WAIT_STATES) {
@@ -157,8 +159,9 @@ static int tpm_tis_spi_xfer(struct udevice *dev, u32 addr, const u8 *out,
 
 release_bus:
 	/* If an error occurred, release the chip by deasserting the CS */
-	if (ret < 0)
+	if (ret < 0) {
 		spi_xfer(slave, 0, NULL, NULL, SPI_XFER_END);
+	}
 
 	spi_release_bus(slave);
 
@@ -176,8 +179,9 @@ static int tpm_tis_spi_read32(struct udevice *dev, u32 addr, u32 *result)
 	int ret;
 
 	ret = tpm_tis_spi_read(dev, addr, (u8 *)&result_le, sizeof(u32));
-	if (!ret)
+	if (!ret) {
 		*result = le32_to_cpu(result_le);
+	}
 
 	return ret;
 }
@@ -196,8 +200,9 @@ static int tpm_tis_spi_check_locality(struct udevice *dev, int loc)
 	int ret;
 
 	ret = tpm_tis_spi_read(dev, TPM_ACCESS(loc), &buf, 1);
-	if (ret)
+	if (ret) {
 		return ret;
+	}
 
 	if ((buf & mask) == mask) {
 		chip->locality = loc;
@@ -213,8 +218,9 @@ static void tpm_tis_spi_release_locality(struct udevice *dev, int loc,
 	const u8 mask = TPM_ACCESS_REQUEST_PENDING | TPM_ACCESS_VALID;
 	u8 buf;
 
-	if (tpm_tis_spi_read(dev, TPM_ACCESS(loc), &buf, 1) < 0)
+	if (tpm_tis_spi_read(dev, TPM_ACCESS(loc), &buf, 1) < 0) {
 		return;
+	}
 
 	if (force || (buf & mask) == mask) {
 		buf = TPM_ACCESS_ACTIVE_LOCALITY;
@@ -230,8 +236,9 @@ static int tpm_tis_spi_request_locality(struct udevice *dev, int loc)
 	int ret;
 
 	ret = tpm_tis_spi_check_locality(dev, loc);
-	if (!ret)
+	if (!ret) {
 		return 0;
+	}
 
 	if (ret != -ENOENT) {
 		log(LOGC_NONE, LOGL_ERR, "%s: Failed to get locality: %d\n",
@@ -250,8 +257,9 @@ static int tpm_tis_spi_request_locality(struct udevice *dev, int loc)
 	stop = chip->timeout_a;
 	do {
 		ret = tpm_tis_spi_check_locality(dev, loc);
-		if (!ret)
+		if (!ret) {
 			return 0;
+		}
 
 		if (ret != -ENOENT) {
 			log(LOGC_NONE, LOGL_ERR,
@@ -285,11 +293,13 @@ static int tpm_tis_spi_wait_for_stat(struct udevice *dev, u8 mask,
 	do {
 		mdelay(TPM_TIMEOUT_MS);
 		ret = tpm_tis_spi_status(dev, status);
-		if (ret)
+		if (ret) {
 			return ret;
+		}
 
-		if ((*status & mask) == mask)
+		if ((*status & mask) == mask) {
 			return 0;
+		}
 	} while (get_timer(start) < stop);
 
 	return -ETIMEDOUT;
@@ -300,7 +310,7 @@ static u8 tpm_tis_spi_valid_status(struct udevice *dev, u8 *status)
 	struct tpm_chip *chip = dev_get_priv(dev);
 
 	return tpm_tis_spi_wait_for_stat(dev, TPM_STS_VALID,
-		chip->timeout_c, status);
+					 chip->timeout_c, status);
 }
 
 static int tpm_tis_spi_get_burstcount(struct udevice *dev)
@@ -315,12 +325,14 @@ static int tpm_tis_spi_get_burstcount(struct udevice *dev)
 	do {
 		ret = tpm_tis_spi_read32(dev, TPM_STS(chip->locality),
 					 &burstcount);
-		if (ret)
+		if (ret) {
 			return -EBUSY;
+		}
 
 		burstcount = (burstcount >> 8) & 0xFFFF;
-		if (burstcount)
+		if (burstcount) {
 			return burstcount;
+		}
 
 		mdelay(TPM_TIMEOUT_MS);
 	} while (get_timer(start) < stop);
@@ -347,14 +359,16 @@ static int tpm_tis_spi_recv_data(struct udevice *dev, u8 *buf, size_t count)
 					 TPM_STS_DATA_AVAIL | TPM_STS_VALID,
 					 chip->timeout_c, &status) == 0) {
 		burstcnt = tpm_tis_spi_get_burstcount(dev);
-		if (burstcnt < 0)
+		if (burstcnt < 0) {
 			return burstcnt;
+		}
 
 		len = min_t(int, burstcnt, count - size);
 		ret = tpm_tis_spi_read(dev, TPM_DATA_FIFO(chip->locality),
 				       buf + size, len);
-		if (ret < 0)
+		if (ret < 0) {
 			return ret;
+		}
 
 		size += len;
 	}
@@ -367,8 +381,9 @@ static int tpm_tis_spi_recv(struct udevice *dev, u8 *buf, size_t count)
 	struct tpm_chip *chip = dev_get_priv(dev);
 	int size, expected;
 
-	if (!chip)
+	if (!chip) {
 		return -ENODEV;
+	}
 
 	if (count < TPM_HEADER_SIZE) {
 		size = -EIO;
@@ -388,7 +403,7 @@ static int tpm_tis_spi_recv(struct udevice *dev, u8 *buf, size_t count)
 	}
 
 	size += tpm_tis_spi_recv_data(dev, &buf[TPM_HEADER_SIZE],
-				   expected - TPM_HEADER_SIZE);
+				      expected - TPM_HEADER_SIZE);
 	if (size < expected) {
 		log(LOGC_NONE, LOGL_ERR,
 		    "TPM error, unable to read remaining bytes of result\n");
@@ -411,23 +426,27 @@ static int tpm_tis_spi_send(struct udevice *dev, const u8 *buf, size_t len)
 	int burstcnt, ret;
 	u8 data;
 
-	if (!chip)
+	if (!chip) {
 		return -ENODEV;
+	}
 
-	if (len > TPM_DEV_BUFSIZE)
+	if (len > TPM_DEV_BUFSIZE) {
 		return -E2BIG;  /* Command is too long for our tpm, sorry */
 
+	}
 	ret = tpm_tis_spi_request_locality(dev, 0);
-	if (ret < 0)
+	if (ret < 0) {
 		return -EBUSY;
+	}
 
 	/*
 	 * Check if the TPM is ready. If not, if not, cancel the pending command
 	 * and poll on the status to be finally ready.
 	 */
 	ret = tpm_tis_spi_status(dev, &status);
-	if (ret)
+	if (ret) {
 		return ret;
+	}
 
 	if (!(status & TPM_STS_COMMAND_READY)) {
 		/* Force the transition, usually this will be done at startup */
@@ -451,21 +470,24 @@ static int tpm_tis_spi_send(struct udevice *dev, const u8 *buf, size_t len)
 
 	for (i = 0; i < len - 1;) {
 		burstcnt = tpm_tis_spi_get_burstcount(dev);
-		if (burstcnt < 0)
+		if (burstcnt < 0) {
 			return burstcnt;
+		}
 
 		size = min_t(int, len - i - 1, burstcnt);
 		ret = tpm_tis_spi_write(dev, TPM_DATA_FIFO(chip->locality),
 					buf + i, size);
-		if (ret < 0)
+		if (ret < 0) {
 			goto out_err;
+		}
 
 		i += size;
 	}
 
 	ret = tpm_tis_spi_valid_status(dev, &status);
-	if (ret)
+	if (ret) {
 		goto out_err;
+	}
 
 	if ((status & TPM_STS_DATA_EXPECT) == 0) {
 		ret = -EIO;
@@ -474,12 +496,14 @@ static int tpm_tis_spi_send(struct udevice *dev, const u8 *buf, size_t len)
 
 	ret = tpm_tis_spi_write(dev, TPM_DATA_FIFO(chip->locality),
 				buf + len - 1, 1);
-	if (ret)
+	if (ret) {
 		goto out_err;
+	}
 
 	ret = tpm_tis_spi_valid_status(dev, &status);
-	if (ret)
+	if (ret) {
 		goto out_err;
+	}
 
 	if ((status & TPM_STS_DATA_EXPECT) != 0) {
 		ret = -EIO;
@@ -488,8 +512,9 @@ static int tpm_tis_spi_send(struct udevice *dev, const u8 *buf, size_t len)
 
 	data = TPM_STS_GO;
 	ret = tpm_tis_spi_write(dev, TPM_STS(chip->locality), &data, 1);
-	if (ret)
+	if (ret) {
 		goto out_err;
+	}
 
 	return len;
 
@@ -519,8 +544,9 @@ static int tpm_tis_spi_open(struct udevice *dev)
 {
 	struct tpm_chip *chip = dev_get_priv(dev);
 
-	if (chip->is_open)
+	if (chip->is_open) {
 		return -EBUSY;
+	}
 
 	chip->is_open = 1;
 
@@ -543,8 +569,9 @@ static int tpm_tis_get_desc(struct udevice *dev, char *buf, int size)
 {
 	struct tpm_chip *chip = dev_get_priv(dev);
 
-	if (size < 80)
+	if (size < 80) {
 		return -ENOSPC;
+	}
 
 	return snprintf(buf, size,
 			"%s v2.0: VendorID 0x%04x, DeviceID 0x%04x, RevisionID 0x%02x [%s]",
@@ -566,11 +593,13 @@ static int tpm_tis_wait_init(struct udevice *dev, int loc)
 		mdelay(TPM_TIMEOUT_MS);
 
 		ret = tpm_tis_spi_read(dev, TPM_ACCESS(loc), &status, 1);
-		if (ret)
+		if (ret) {
 			break;
+		}
 
-		if (status & TPM_ACCESS_VALID)
+		if (status & TPM_ACCESS_VALID) {
 			return 0;
+		}
 	} while (get_timer(start) < stop);
 
 	return -EIO;
@@ -657,12 +686,12 @@ static int tpm_tis_spi_remove(struct udevice *dev)
 }
 
 static const struct tpm_ops tpm_tis_spi_ops = {
-	.open		= tpm_tis_spi_open,
-	.close		= tpm_tis_spi_close,
-	.get_desc	= tpm_tis_get_desc,
-	.send		= tpm_tis_spi_send,
-	.recv		= tpm_tis_spi_recv,
-	.cleanup	= tpm_tis_spi_cleanup,
+	.open = tpm_tis_spi_open,
+	.close = tpm_tis_spi_close,
+	.get_desc = tpm_tis_get_desc,
+	.send = tpm_tis_spi_send,
+	.recv = tpm_tis_spi_recv,
+	.cleanup = tpm_tis_spi_cleanup,
 };
 
 static const struct tpm_tis_chip_data tpm_tis_std_chip_data = {
@@ -674,17 +703,17 @@ static const struct tpm_tis_chip_data tpm_tis_std_chip_data = {
 static const struct udevice_id tpm_tis_spi_ids[] = {
 	{
 		.compatible = "tcg,tpm_tis-spi",
-		.data = (ulong)&tpm_tis_std_chip_data,
+		.data = (ulong) & tpm_tis_std_chip_data,
 	},
 	{ }
 };
 
 U_BOOT_DRIVER(tpm_tis_spi) = {
-	.name   = "tpm_tis_spi",
-	.id     = UCLASS_TPM,
+	.name = "tpm_tis_spi",
+	.id = UCLASS_TPM,
 	.of_match = tpm_tis_spi_ids,
-	.ops    = &tpm_tis_spi_ops,
-	.probe	= tpm_tis_spi_probe,
-	.remove	= tpm_tis_spi_remove,
-	.priv_auto	= sizeof(struct tpm_chip),
+	.ops = &tpm_tis_spi_ops,
+	.probe = tpm_tis_spi_probe,
+	.remove = tpm_tis_spi_remove,
+	.priv_auto = sizeof(struct tpm_chip),
 };

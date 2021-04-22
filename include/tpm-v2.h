@@ -19,6 +19,7 @@
 struct udevice;
 
 #define TPM2_DIGEST_LEN		32
+#define TPM2_DIGEST_SHA384_LEN  48
 
 #define TPM2_SHA1_DIGEST_SIZE 20
 #define TPM2_SHA256_DIGEST_SIZE	32

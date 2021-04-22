@@ -146,6 +146,14 @@ config TPM2_TIS_SANDBOX
 	  such as basic configuration, PCR extension and PCR read. Extended
 	  functionalities are not implemented.
 
+config TPM2_FTPM_OPTEE
+	bool "Enable fTPM OP-TEE TPMv2.x driver"
+	depends on TPM_V2 && OPTEE
+	default y
+	help
+	  This driver proxies for a firmware TPM 2.0 implementation, which
+	  leverages ARM Trustzone and OP-TEE Trusted Execution Environment.
+
 config TPM2_TIS_SPI
 	bool "Enable support for TPMv2.x SPI chips"
 	depends on TPM_V2 && DM_SPI

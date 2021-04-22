@@ -553,6 +553,28 @@ int image_setup_libfdt(bootm_headers_t *images, void *blob,
 		printf("ERROR: root node setup failed\n");
 		goto err;
 	}
+#if CONFIG_DM_VERITY
+        /*
+         * Setup dm-verity boot args, but only if os.image_len is defined,
+         * since some boot tools (e.g., 'booti') do not set it. In case of
+         * 'booti' dm-verity boot args are set up in 'booti_start()'.
+         */
+        if (images->os.image_len) {
+                if (verity_setup_boot_args(images->os.image_start,
+                                           images->os.image_len, false)) {
+                        printf("ERROR: Failed to setup verity arguments.");
+                        goto err;
+                }
+        }
+#endif /* CONFIG_DM_VERITY */
+
+#if CONFIG_XLINK_SECURITY
+	if (xlink_security_setup_boot_args()) {
+		printf("ERROR: Failed to setup xlink_security arguments.");
+		goto err;
+	}
+#endif
+
 	if (fdt_chosen(blob) < 0) {
 		printf("ERROR: /chosen node create failed\n");
 		goto err;

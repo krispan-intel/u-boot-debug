@@ -28,19 +28,21 @@ static int spi_set_speed_mode(struct udevice *bus, int speed, int mode)
 	int ret;
 
 	ops = spi_get_ops(bus);
-	if (ops->set_speed)
+	if (ops->set_speed) {
 		ret = ops->set_speed(bus, speed);
-	else
+	} else {
 		ret = -EINVAL;
+	}
 	if (ret) {
 		dev_err(bus, "Cannot set speed (err=%d)\n", ret);
 		return ret;
 	}
 
-	if (ops->set_mode)
+	if (ops->set_mode) {
 		ret = ops->set_mode(bus, mode);
-	else
+	} else {
 		ret = -EINVAL;
+	}
 	if (ret) {
 		dev_err(bus, "Cannot set mode (err=%d)\n", ret);
 		return ret;
@@ -61,20 +63,21 @@ int dm_spi_claim_bus(struct udevice *dev)
 	mode = slave->mode;
 
 	if (spi->max_hz) {
-		if (speed)
+		if (speed) {
 			speed = min(speed, spi->max_hz);
-		else
+		} else {
 			speed = spi->max_hz;
+		}
 	}
-	if (!speed)
+	if (!speed) {
 		speed = SPI_DEFAULT_SPEED_HZ;
-
+	}
 	if (speed != spi->speed || mode != spi->mode) {
 		int ret = spi_set_speed_mode(bus, speed, slave->mode);
 
-		if (ret)
+		if (ret) {
 			return log_ret(ret);
-
+		}
 		spi->speed = speed;
 		spi->mode = mode;
 	}
@@ -97,8 +100,10 @@ int dm_spi_xfer(struct udevice *dev, unsigned int bitlen,
 	struct udevice *bus = dev->parent;
 	struct dm_spi_ops *ops = spi_get_ops(bus);
 
-	if (bus->uclass->uc_drv->id != UCLASS_SPI)
+	debug("Bus name: %s\n", bus->name);
+	if (bus->uclass->uc_drv->id != UCLASS_SPI) {
 		return -EOPNOTSUPP;
+	}
 	if (!ops->xfer)
 		return -ENOSYS;
 
@@ -111,10 +116,12 @@ int dm_spi_get_mmap(struct udevice *dev, ulong *map_basep, uint *map_sizep,
 	struct udevice *bus = dev->parent;
 	struct dm_spi_ops *ops = spi_get_ops(bus);
 
-	if (bus->uclass->uc_drv->id != UCLASS_SPI)
+	if (bus->uclass->uc_drv->id != UCLASS_SPI) {
 		return -EOPNOTSUPP;
-	if (!ops->get_mmap)
+	}
+	if (!ops->get_mmap) {
 		return -ENOSYS;
+	}
 
 	return ops->get_mmap(dev, map_basep, map_sizep, offsetp);
 }
@@ -142,8 +149,9 @@ int spi_write_then_read(struct spi_slave *slave, const u8 *opcode,
 	unsigned long flags = SPI_XFER_BEGIN;
 	int ret;
 
-	if (n_buf == 0)
+	if (n_buf == 0) {
 		flags |= SPI_XFER_END;
+	}
 
 	ret = spi_xfer(slave, n_opcode * 8, opcode, NULL, flags);
 	if (ret) {
@@ -152,10 +160,11 @@ int spi_write_then_read(struct spi_slave *slave, const u8 *opcode,
 			n_opcode, ret);
 	} else if (n_buf != 0) {
 		ret = spi_xfer(slave, n_buf * 8, txbuf, rxbuf, SPI_XFER_END);
-		if (ret)
+		if (ret) {
 			dev_dbg(slave->dev,
 				"spi: failed to transfer %zu bytes of data: %d\n",
 				n_buf, ret);
+		}
 	}
 
 	return ret;
@@ -166,8 +175,9 @@ static int spi_child_post_bind(struct udevice *dev)
 {
 	struct dm_spi_slave_plat *plat = dev_get_parent_plat(dev);
 
-	if (!dev_has_ofnode(dev))
+	if (!dev_has_ofnode(dev)) {
 		return 0;
+	}
 
 	return spi_slave_of_to_plat(dev, plat);
 }
@@ -185,20 +195,27 @@ static int spi_post_probe(struct udevice *bus)
 	static int reloc_done;
 
 	if (!reloc_done) {
-		if (ops->claim_bus)
+		if (ops->claim_bus) {
 			ops->claim_bus += gd->reloc_off;
-		if (ops->release_bus)
+		}
+		if (ops->release_bus) {
 			ops->release_bus += gd->reloc_off;
-		if (ops->set_wordlen)
+		}
+		if (ops->set_wordlen) {
 			ops->set_wordlen += gd->reloc_off;
-		if (ops->xfer)
+		}
+		if (ops->xfer) {
 			ops->xfer += gd->reloc_off;
-		if (ops->set_speed)
+		}
+		if (ops->set_speed) {
 			ops->set_speed += gd->reloc_off;
-		if (ops->set_mode)
+		}
+		if (ops->set_mode) {
 			ops->set_mode += gd->reloc_off;
-		if (ops->cs_info)
+		}
+		if (ops->cs_info) {
 			ops->cs_info += gd->reloc_off;
+		}
 		reloc_done++;
 	}
 #endif
@@ -298,8 +315,9 @@ int spi_cs_info(struct udevice *bus, uint cs, struct spi_cs_info *info)
 	struct spi_cs_info local_info;
 	int ret;
 
-	if (!info)
+	if (!info) {
 		info = &local_info;
+	}
 
 	/* If there is a device attached, return it */
 	info->dev = NULL;
@@ -432,8 +450,9 @@ struct spi_slave *spi_setup_slave(unsigned int busnum, unsigned int cs,
 
 	ret = spi_get_bus_and_cs(busnum, cs, speed, mode, NULL, 0, &dev,
 				 &slave);
-	if (ret)
+	if (ret) {
 		return NULL;
+	}
 
 	return slave;
 }
@@ -451,16 +470,21 @@ int spi_slave_of_to_plat(struct udevice *dev, struct dm_spi_slave_plat *plat)
 	plat->cs = dev_read_u32_default(dev, "reg", -1);
 	plat->max_hz = dev_read_u32_default(dev, "spi-max-frequency",
 					    SPI_DEFAULT_SPEED_HZ);
-	if (dev_read_bool(dev, "spi-cpol"))
+	if (dev_read_bool(dev, "spi-cpol")) {
 		mode |= SPI_CPOL;
-	if (dev_read_bool(dev, "spi-cpha"))
+	}
+	if (dev_read_bool(dev, "spi-cpha")) {
 		mode |= SPI_CPHA;
-	if (dev_read_bool(dev, "spi-cs-high"))
+	}
+	if (dev_read_bool(dev, "spi-cs-high")) {
 		mode |= SPI_CS_HIGH;
-	if (dev_read_bool(dev, "spi-3wire"))
+	}
+	if (dev_read_bool(dev, "spi-3wire")) {
 		mode |= SPI_3WIRE;
-	if (dev_read_bool(dev, "spi-half-duplex"))
+	}
+	if (dev_read_bool(dev, "spi-half-duplex")) {
 		mode |= SPI_PREAMBLE;
+	}
 
 	/* Device DUAL/QUAD mode */
 	value = dev_read_u32_default(dev, "spi-tx-bus-width", 1);
@@ -505,28 +529,28 @@ int spi_slave_of_to_plat(struct udevice *dev, struct dm_spi_slave_plat *plat)
 }
 
 UCLASS_DRIVER(spi) = {
-	.id		= UCLASS_SPI,
-	.name		= "spi",
-	.flags		= DM_UC_FLAG_SEQ_ALIAS,
+	.id = UCLASS_SPI,
+	.name = "spi",
+	.flags = DM_UC_FLAG_SEQ_ALIAS,
 #if CONFIG_IS_ENABLED(OF_CONTROL) && !CONFIG_IS_ENABLED(OF_PLATDATA)
-	.post_bind	= dm_scan_fdt_dev,
+	.post_bind = dm_scan_fdt_dev,
 #endif
-	.post_probe	= spi_post_probe,
+	.post_probe = spi_post_probe,
 	.child_pre_probe = spi_child_pre_probe,
-	.per_device_auto	= sizeof(struct dm_spi_bus),
-	.per_child_auto	= sizeof(struct spi_slave),
-	.per_child_plat_auto	= sizeof(struct dm_spi_slave_plat),
+	.per_device_auto = sizeof(struct dm_spi_bus),
+	.per_child_auto = sizeof(struct spi_slave),
+	.per_child_plat_auto = sizeof(struct dm_spi_slave_plat),
 #if !CONFIG_IS_ENABLED(OF_PLATDATA)
 	.child_post_bind = spi_child_post_bind,
 #endif
 };
 
 UCLASS_DRIVER(spi_generic) = {
-	.id		= UCLASS_SPI_GENERIC,
-	.name		= "spi_generic",
+	.id = UCLASS_SPI_GENERIC,
+	.name= "spi_generic",
 };
 
 U_BOOT_DRIVER(spi_generic_drv) = {
-	.name		= "spi_generic_drv",
-	.id		= UCLASS_SPI_GENERIC,
+	.name = "spi_generic_drv",
+	.id = UCLASS_SPI_GENERIC,
 };

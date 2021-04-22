@@ -561,6 +561,14 @@ config ARCH_MVEBU
 	select SPI
 	imply CMD_DM
 
+config ARCH_THB
+	bool "Intel Thunder Bay SoC"
+	select ARM64
+	select DM
+	select OF_CONTROL
+	select DM_SERIAL
+	select SYS_NS16550
+
 config TARGET_APF27
 	bool "Support apf27"
 	select CPU_ARM926EJS
@@ -1898,6 +1906,8 @@ source "arch/arm/mach-imx/imxrt/Kconfig"
 
 source "arch/arm/mach-imx/mxs/Kconfig"
 
+source "arch/arm/mach-thunderbay/Kconfig"
+
 source "arch/arm/mach-omap2/Kconfig"
 
 source "arch/arm/cpu/armv8/fsl-layerscape/Kconfig"
@@ -2017,6 +2027,7 @@ source "board/variscite/dart_6ul/Kconfig"
 source "board/vscom/baltos/Kconfig"
 source "board/phytium/durian/Kconfig"
 source "board/xen/xenguest_arm64/Kconfig"
+source "board/intel/thb-soc/Kconfig"
 
 source "arch/arm/Kconfig.debug"
 

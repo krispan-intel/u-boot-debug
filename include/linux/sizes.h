@@ -43,8 +43,8 @@
 #define SZ_256M				0x10000000
 #define SZ_512M				0x20000000
 
-#define SZ_1G				0x40000000
-#define SZ_2G				0x80000000
+#define SZ_1G				_AC(0x40000000, ULL)
+#define SZ_2G				_AC(0x80000000, ULL)
 
 #define SZ_4G				_AC(0x100000000, ULL)
 

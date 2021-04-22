@@ -137,9 +137,9 @@ static int initr_reloc_global_data(void)
 #ifdef __ARM__
 	monitor_flash_len = _end - __image_copy_start;
 #elif defined(CONFIG_NDS32) || defined(CONFIG_RISCV)
-	monitor_flash_len = (ulong)&_end - (ulong)&_start;
+	monitor_flash_len = (ulong) & _end - (ulong) & _start;
 #elif !defined(CONFIG_SANDBOX) && !defined(CONFIG_NIOS2)
-	monitor_flash_len = (ulong)&__init_end - gd->relocaddr;
+	monitor_flash_len = (ulong) & __init_end - gd->relocaddr;
 #endif
 #if defined(CONFIG_MPC85xx) || defined(CONFIG_MPC86xx)
 	/*
@@ -200,7 +200,7 @@ static int initr_addr_map(void)
 #if defined(CONFIG_SYS_INIT_RAM_LOCK) && defined(CONFIG_E500)
 static int initr_unlock_ram_in_cache(void)
 {
-	unlock_ram_in_cache();	/* it's time to unlock D-cache in e500 */
+	unlock_ram_in_cache();  /* it's time to unlock D-cache in e500 */
 	return 0;
 }
 #endif
@@ -209,7 +209,7 @@ static int initr_barrier(void)
 {
 #ifdef CONFIG_PPC
 	/* TODO: Can we not use dmb() macros for this? */
-	asm("sync ; isync");
+	asm ("sync ; isync");
 #endif
 	return 0;
 }
@@ -242,8 +242,9 @@ static int initr_of_live(void)
 		ret = of_live_build(gd->fdt_blob,
 				    (struct device_node **)gd_of_root_ptr());
 		bootstage_accum(BOOTSTAGE_ID_ACCUM_OF_LIVE);
-		if (ret)
+		if (ret) {
 			return ret;
+		}
 	}
 
 	return 0;
@@ -263,9 +264,10 @@ static int initr_dm(void)
 	bootstage_start(BOOTSTAGE_ID_ACCUM_DM_R, "dm_r");
 	ret = dm_init_and_scan(false);
 	bootstage_accum(BOOTSTAGE_ID_ACCUM_DM_R);
-	if (ret)
+	if (ret) {
 		return ret;
 
+	}
 	return 0;
 }
 #endif
@@ -276,8 +278,9 @@ static int initr_dm_devices(void)
 
 	if (IS_ENABLED(CONFIG_TIMER_EARLY)) {
 		ret = dm_timer_init();
-		if (ret)
+		if (ret) {
 			return ret;
+		}
 	}
 
 	if (IS_ENABLED(CONFIG_MULTIPLEXER)) {
@@ -345,10 +348,11 @@ static int initr_flash(void)
 
 	puts("Flash: ");
 
-	if (board_flash_wp_on())
+	if (board_flash_wp_on()) {
 		printf("Uninitialized - Write Protect On\n");
-	else
+	} else {
 		flash_size = flash_init();
+	}
 
 	print_size(flash_size, "");
 #ifdef CONFIG_SYS_FLASH_CHECKSUM
@@ -364,7 +368,7 @@ static int initr_flash(void)
 					    flash_base,
 					    flash_size));
 	}
-#endif /* CONFIG_SYS_FLASH_CHECKSUM */
+#endif  /* CONFIG_SYS_FLASH_CHECKSUM */
 	putc('\n');
 
 	/* update start of FLASH memory    */
@@ -383,7 +387,7 @@ static int initr_flash(void)
 	/* flash mapped at end of memory map */
 	bd->bi_flashoffset = CONFIG_SYS_TEXT_BASE + flash_size;
 #elif CONFIG_SYS_MONITOR_BASE == CONFIG_SYS_FLASH_BASE
-	bd->bi_flashoffset = monitor_flash_len;	/* reserved area for monitor */
+	bd->bi_flashoffset = monitor_flash_len; /* reserved area for monitor */
 #endif
 	return 0;
 }
@@ -454,11 +458,11 @@ static int should_load_env(void)
 static int initr_env(void)
 {
 	/* initialize environment */
-	if (should_load_env())
+	if (should_load_env()) {
 		env_relocate();
-	else
+	} else {
 		env_set_default(NULL, 0);
-
+	}
 	if (IS_ENABLED(CONFIG_OF_CONTROL))
 		env_set_hex("fdtcontroladdr",
 			    (unsigned long)map_to_sysmem(gd->fdt_blob));
@@ -551,8 +555,9 @@ static int initr_ide(void)
 {
 	puts("IDE:   ");
 #if defined(CONFIG_START_IDE)
-	if (board_start_ide())
+	if (board_start_ide()) {
 		ide_init();
+	}
 #else
 	ide_init();
 #endif
@@ -600,7 +605,9 @@ static init_fnc_t init_sequence_r[] = {
 	initr_reloc,
 	/* TODO: could x86/PPC have this also perhaps? */
 #ifdef CONFIG_ARM
+#ifdef CONFIG_PLATFORM_THUNDERBAY
 	initr_caches,
+#endif
 	/* Note: For Freescale LS2 SoCs, new MMU table is created in DDR.
 	 *	 A temporary mapping of IFC high region is since removed,
 	 *	 so environmental variables in NOR flash is not available
@@ -615,7 +622,7 @@ static init_fnc_t init_sequence_r[] = {
 	initr_barrier,
 	initr_malloc,
 	log_init,
-	initr_bootstage,	/* Needs malloc() but has its own timer */
+	initr_bootstage,        /* Needs malloc() but has its own timer */
 #if defined(CONFIG_CONSOLE_RECORD)
 	console_record_init,
 #endif
@@ -631,7 +638,7 @@ static init_fnc_t init_sequence_r[] = {
 #endif
 #if defined(CONFIG_ARM) || defined(CONFIG_NDS32) || defined(CONFIG_RISCV) || \
 	defined(CONFIG_SANDBOX)
-	board_init,	/* Setup chipselects */
+	board_init,     /* Setup chipselects */
 #endif
 	/*
 	 * TODO: printing of the clock inforamtion of the board is now
@@ -727,16 +734,16 @@ static init_fnc_t init_sequence_r[] = {
 #ifdef CONFIG_API
 	api_init,
 #endif
-	console_init_r,		/* fully init console as a device */
+	console_init_r,         /* fully init console as a device */
 #ifdef CONFIG_DISPLAY_BOARDINFO_LATE
 	console_announce_r,
 	show_board_info,
 #endif
 #ifdef CONFIG_ARCH_MISC_INIT
-	arch_misc_init,		/* miscellaneous arch-dependent init */
+	arch_misc_init,         /* miscellaneous arch-dependent init */
 #endif
 #ifdef CONFIG_MISC_INIT_R
-	misc_init_r,		/* miscellaneous platform-dependent init */
+	misc_init_r,            /* miscellaneous platform-dependent init */
 #endif
 	INIT_FUNC_WATCHDOG_RESET
 #ifdef CONFIG_CMD_KGDB
@@ -744,7 +751,7 @@ static init_fnc_t init_sequence_r[] = {
 #endif
 	interrupt_init,
 #if defined(CONFIG_MICROBLAZE) || defined(CONFIG_M68K)
-	timer_init,		/* initialize timer */
+	timer_init,             /* initialize timer */
 #endif
 #if defined(CONFIG_LED_STATUS)
 	initr_status_led,
@@ -827,8 +834,9 @@ void board_init_r(gd_t *new_gd, ulong dest_addr)
 		init_sequence_r[i] += gd->reloc_off;
 #endif
 
-	if (initcall_run_list(init_sequence_r))
+	if (initcall_run_list(init_sequence_r)) {
 		hang();
+	}
 
 	/* NOTREACHED - run_main_loop() does not return */
 	hang();

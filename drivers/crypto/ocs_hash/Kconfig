@@ -1,0 +1,94 @@
+config SHA1_HW_ACCEL
+	bool "HW acceleration for SHA1"
+	depends on SHA_HW_ACCEL
+	default y
+	help
+	  Say yes here to support HW acceleration on SHA1
+	  Hardware acceleration on SHA1 simple hash only, select
+	  SHA1_PROG_HW_ACCEL for support on SHA1 progressive hash.
+
+config SHA256_HW_ACCEL
+	bool "HW acceleration for SHA256"
+	depends on SHA_HW_ACCEL
+	default y
+	help
+	  Say yes here to support HW acceleration on SHA256
+	  Hardware acceleration on SHA256 simple hash only, select
+	  SHA256_PROG_HW_ACCEL for support on SHA256 progressive hash.
+
+config SHA384_HW_ACCEL
+	bool "HW acceleration for SHA384"
+	depends on SHA_HW_ACCEL
+	default n
+	help
+	  Say yes here to support HW acceleration on SHA384
+	  Hardware acceleration on SHA384 simple hash only, select
+	  SHA384_PROG_HW_ACCEL for support on SHA256 progressive hash.
+
+config SHA512_HW_ACCEL
+	bool "HW acceleration for SHA512"
+	depends on SHA_HW_ACCEL
+	default n
+	help
+	  Say yes here to support HW acceleration on SHA512
+	  Hardware acceleration on SHA512 simple hash only, select
+	  SHA512_PROG_HW_ACCEL for support on SHA512 progressive hash.
+
+config SHA1_PROG_HW_ACCEL
+	bool "Enable HW Progressive hashing support for SHA1"
+	depends on SHA_PROG_HW_ACCEL
+	default y
+	help
+	  This option enables hardware-acceleration for
+	  SHA1 progressive hashing.
+	  Data can be streamed in a block at a time and the hashing
+	  is performed in hardware.
+
+config SHA256_PROG_HW_ACCEL
+	bool "Enable HW Progressive hashing support for SHA256"
+	depends on SHA_PROG_HW_ACCEL
+	default y
+	help
+	  This option enables hardware-acceleration for
+	  SHA256 progressive hashing.
+	  Data can be streamed in a block at a time and the hashing
+	  is performed in hardware.
+
+config SHA384_PROG_HW_ACCEL
+	bool "Enable HW Progressive hashing support for SHA384"
+	depends on SHA_PROG_HW_ACCEL
+	default n
+	help
+	  This option enables hardware-acceleration for
+	  SHA384 progressive hashing.
+	  Data can be streamed in a block at a time and the hashing
+	  is performed in hardware.
+
+config SHA512_PROG_HW_ACCEL
+	bool "Enable HW Progressive hashing support for SHA512"
+	depends on SHA_PROG_HW_ACCEL
+	default n
+	help
+	  This option enables hardware-acceleration for
+	  SHA512 progressive hashing.
+	  Data can be streamed in a block at a time and the hashing
+	  is performed in hardware.
+
+config OCS_HW_HASH
+	bool "OCS Hash HW Acceleration"
+	depends on DM
+	depends on ARCH_KMB
+	select SHA256
+	select SHA384
+	select SHA512
+	select SHA256_HW_ACCEL
+	select SHA384_HW_ACCEL
+	select SHA512_HW_ACCEL
+	select SHA256_PROG_HW_ACCEL
+	select SHA384_PROG_HW_ACCEL
+	select SHA512_PROG_HW_ACCEL
+	help
+	  Enables the Offload Crypto Subsystem (OCS) hash HW acceleration on
+	  SHA256, SHA384 and SHA512.
+	  The driver uses ATF secure world services to invoke OCS hash APIs.
+

@@ -197,3 +197,14 @@ int tpm_init(struct udevice *dev)
 {
 	return tpm_open(dev);
 }
+
+int tpm_deinit(struct udevice *dev)
+{
+	int err;
+
+	err = uclass_first_device_err(UCLASS_TPM, &dev);
+	if (err)
+		return err;
+
+	return tpm_close(dev);
+}

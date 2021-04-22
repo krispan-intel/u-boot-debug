@@ -502,4 +502,31 @@ config ESM_PMIC
 	  Support ESM (Error Signal Monitor) on PMIC devices. ESM is used
 	  typically to reboot the board in error condition.
 
+config THUNDERBAY_PCIE_EP_MISC_VPU_BOOT
+        bool "Enable PCIe EP Misc VPU Boot driver on Thunder Bay Platform"
+        help
+          Enable PCIe boot MISC driver to interface with PCIe
+          hardware on Thunder Bay platform. Provides functions to
+          read from and write to the communication BAR with the
+          host. Provides methods of setting up and changing the
+          communication BAR location in local memory, as well as
+          performing DMA transactions from host memory to local
+          memory.
+
+if THUNDERBAY_PCIE_EP_MISC_VPU_BOOT
+
+config THUNDERBAY_PCIEBOOT_BUF_SIZE
+        hex "Thunder Bay communications BAR size"
+        help
+          This is the buffer size where we can place the Thunder Bay PCIe BAR
+          for communications.
+
+config THUNDERBAY_PCIEBOOT_BUF_ADDR
+        hex "Thunder Bay communications BAR address"
+        help
+          This is the buffer address where we can place the Thunder Bay PCIe BAR
+          for communications.
+
+endif # THUNDERBAY_PCIE_EP_MISC_VPU_BOOT
+
 endmenu

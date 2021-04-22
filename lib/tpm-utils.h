@@ -8,6 +8,7 @@
 #define __TPM_UTILS_H
 
 #define COMMAND_BUFFER_SIZE 256
+#define COMMAND_BUFFER_SHA384_SIZE 384
 
 /* Internal error of TPM command library */
 #define TPM_LIB_ERROR ((u32)~0u)

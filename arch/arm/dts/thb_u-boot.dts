@@ -1,0 +1,195 @@
+/*
+ * Device tree describing the Thunder Bay Platform configuration
+ * containing a single Arm core.
+ *
+ * Copyright (c) 2020 Intel Corporation.
+ *
+ * SPDX-License-Identifier: GPL-2.0
+ *
+ */
+
+/dts-v1/;
+
+#include "thb-common_u-boot.dtsi"
+
+/ {
+	model = "Intel Thunder Bay";
+	compatible = "intel,thunderbay:u-boot";
+
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	aliases {
+		serial0 = &uart0;
+		serial1 = &uart1;
+		spi0 = &spi0;
+		spi1 = &spi1;
+		gpio0 = &gpio0;
+	};
+
+	aliases {
+		mmc0 = &mmc;
+	};
+
+	chosen {
+		stdout-path = "serial0:9600n8";
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		csram_reserved {
+			compatible = "shared-dma-pool";
+			reg = <0x18 80000000 0x0 0x01800000>;
+			no-map;
+		};
+	};
+
+	sysmem@1008000000 {
+		compatible = "mmio-sram";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		reg = <0x10 0x08000000 0x0 0x2000000>;
+		ranges = <0 0x0 0x10 0x08000000 0x0 0x2000000>;
+
+		/*
+		* Allocate 1MB at fixed location for shared memory between
+		* non-secure world and BL31 to be used for SCMI.
+		*/
+		scmi_sec_shmem: scmi_sec_shmem@0 {
+			compatible = "arm,scmi-shmem";
+			reg = <0x0 0x0 0x0 0x100000>;
+			pool;
+		};
+
+		/*
+		* Allocate some space in shared area for VPU IPC driver
+		* to place the X509 certificate.
+		*/
+		vpu_x509_reserved: vpu_x509_reserved@100000 {
+			compatible = "shared-dma-pool";
+			reg = <0x0 0x100000 0x0 0x100000>;
+			no-map;
+		};
+
+		/* Allocate the rest of shared memory for general use.
+		 * VPU x509 certificate area will occupy/allocated
+		 * from the below region by the IPC driver. So, optee
+		 * needs to know the region for the VPU authentication
+		 * service TA. https://hsdes.intel.com/resource/16011061170
+		 */
+		general_sec_shmem: general_sec_shmem@200000 {
+			reg = <0x0 0x200000 0x0 0x600000>;
+		};
+
+		optee_tee_shmem: optee_tee_shmem@800000 {
+			reg = <0x0 0x800000 0x0 0x1800000>;
+		};
+	};
+
+	/*
+	* For U-Boot to reference the general use shared memory
+	* area, we use this node.
+	*/
+	general_sec_shmem {
+		shmem = <&general_sec_shmem>;
+	};
+
+        fixed_rate_10mhz: fixed_rate_10mhz {
+                compatible = "thb-fixed-clock";
+                #clock-cells = <0>;
+                clock-frequency = <10000000>;
+                clock-output-names = "dummy_clk";
+                u-boot,dm-pre-reloc;
+        };
+
+        fixed_rate_200mhz: fixed_rate_200mhz {
+                compatible = "thb-fixed-clock";
+                #clock-cells = <0>;
+                clock-frequency = <200000000>;
+                clock-output-names = "dummy_clk";
+                u-boot,dm-pre-reloc;
+        };
+
+	fixed_rate_emu_10mhz: fixed_rate_emu_10mhz {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <10000000>;
+		clock-output-names = "dummy_clk";
+		u-boot,dm-pre-reloc;
+	};
+};
+
+&uart0 {
+	status = "okay";
+};
+
+&uart1 {
+	status = "okay";
+};
+
+&emmc_phy {
+	status = "okay";
+	clocks = <&fixed_rate_10mhz>;
+};
+
+&mmc {
+	status = "okay";
+	clocks = <&fixed_rate_200mhz>, <&fixed_rate_200mhz>;
+	assigned-clocks = <&fixed_rate_200mhz>;
+};
+
+&pcie_ep0{
+	status = "okay";
+};
+
+&ecdsa_engine {
+	/* Use general secure-world shared memory. */
+	shmem = <&general_sec_shmem>;
+};
+
+&xmss_engine {
+	/* Use general secure-world shared memory. */
+	shmem = <&general_sec_shmem>;
+};
+
+&gpio0 {
+	status = "okay";
+};
+
+&spi1 {
+	status = "okay";
+        clocks = <&fixed_rate_emu_10mhz>;
+	/* The dTPM will be reset upon platform reset,
+	 * without additional individual SPI reset control on THB CRB and VV.
+	 * The CS for VV is enabled in drivers/spi/designware_spi.c.
+	 * May need to revisit to keep this in DTS for ease of control. CRB doesn't CS.
+	 */
+	/*cs-gpio = <&gpio0 45 0>;*/ /* This will be added post GPIO changes */
+
+	tpm_tis_spi: slb9670@0 {
+		compatible = "tis,tpm2-spi", "infineon,slb9670";
+		spi-max-frequency = <22500000>;
+		reg = <0x1>;
+		/* U-Boot will enable fwTPM or dTPM at run-time */
+		/*gpio-reset = <&gpio0 49 0>;*/
+		status = "okay";
+	};
+};
+
+&spi0 {
+	status = "okay";
+	clocks = <&fixed_rate_emu_10mhz>;
+	/*cs-gpio = <&gpio0 19 0>;*/ /* This will be added post GPIO changes */
+
+	flash: mx25u6435f {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "spi-flash";
+		spi-max-frequency = <1000000>;
+		reg = <0x1>;
+	};
+};
+

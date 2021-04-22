@@ -1238,7 +1238,7 @@ int calculate_hash(const void *data, int data_len, const char *algo,
 		md5_wd((unsigned char *)data, data_len, value, CHUNKSZ_MD5);
 		*value_len = 16;
 	} else {
-		debug("Unsupported hash alogrithm\n");
+		debug("Unsupported hash algorithm\n");
 		return -1;
 	}
 	return 0;
@@ -2050,6 +2050,16 @@ int fit_image_load(bootm_headers_t *images, ulong addr,
 			puts("OK\n");
 		}
 
+		if (IMAGE_ENABLE_SVN) {
+			puts("   Verifying SVN ... ");
+			if (fit_config_check_svn(fit, cfg_noffset)) {
+				puts("FAIL\n");
+				bootstage_error(bootstage_id +
+					BOOTSTAGE_SUB_CHECK);
+				return -EACCES;
+			}
+			puts("OK\n");
+		}
 		bootstage_mark(BOOTSTAGE_ID_FIT_CONFIG);
 
 		noffset = fit_conf_get_prop_node(fit, cfg_noffset,

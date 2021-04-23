@@ -703,6 +703,9 @@ static const struct tpm_tis_chip_data tpm_tis_std_chip_data = {
 static const struct udevice_id tpm_tis_spi_ids[] = {
 	{
 		.compatible = "tcg,tpm_tis-spi",
+#ifdef CONFIG_PLATFORM_THUNDERBAY
+		.compatible = "tis,tpm2-spi",
+#endif
 		.data = (ulong) & tpm_tis_std_chip_data,
 	},
 	{ }

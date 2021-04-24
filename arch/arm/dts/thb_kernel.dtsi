@@ -1550,8 +1550,9 @@
 				reg = <0x1 0x85520000 0x0 0x4050>;
 				passive_delay = <1000>;
 				polling_delay = <2000>;
-				trip_temp = <40000 80000 100000>;
-				trip_type = "passive", "passive", "critical";
+				trip_temp = <0 40000 60000 80000 100000>;
+				trip_type = "passive", "passive", "passive",
+						"passive", "critical";
 				pid_cfg = <&pid_cfg>;
 				};
 
@@ -1562,8 +1563,9 @@
 				reg = <0x2 0x85520000 0x0 0x4050>;
 				passive_delay = <1000>;
 				polling_delay = <2000>;
-				trip_temp = <40000 80000 100000>;
-				trip_type = "passive", "passive", "critical";
+				trip_temp = <0 40000 60000 80000 100000>;
+				trip_type = "passive", "passive", "passive",
+						"passive", "critical";
 				pid_cfg = <&pid_cfg>;
 				};
 
@@ -1574,8 +1576,9 @@
 				reg = <0x3 0x85520000 0x0 0x4050>;
 				passive_delay = <1000>;
 				polling_delay = <2000>;
-				trip_temp = <40000 80000 100000>;
-				trip_type = "passive", "passive", "critical";
+				trip_temp = <0 40000 60000 80000 100000>;
+				trip_type = "passive", "passive", "passive",
+						"passive", "critical";
 				pid_cfg = <&pid_cfg>;
 				};
 
@@ -1586,8 +1589,9 @@
 				reg = <0x4 0x85520000 0x0 0x4050>;
 				passive_delay = <1000>;
 				polling_delay = <2000>;
-				trip_temp = <40000 80000 100000>;
-				trip_type = "passive", "passive", "critical";
+				trip_temp = <0 40000 60000 80000 100000>;
+				trip_type = "passive", "passive", "passive",
+						"passive", "critical";
 				pid_cfg = <&pid_cfg>;
 				};
 
@@ -1819,33 +1823,70 @@
 				};
 			};
 		};
+
 		vpu0 {
 			polling-delay-passive = <1000>;
 			polling-delay = <2000>;
-					/* sensor       ID */
+			/* sensor       ID */
 			thermal-sensors = <&tsens 2>;
 			trips {
 				/* each zone within the SoC \
 				 * may have its own trips
 				 */
+				 /* temperature in millicelsius */
 				vpu0_alert0: vpu-alert0 {
 					/* millicelsius */
-					temperature = <40000>;
+					temperature = <0>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 				vpu0_alert1: vpu-alert1 {
+					temperature = <40000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				vpu0_alert2: vpu-alert2 {
+					temperature = <60000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				vpu0_alert3: vpu-alert3 {
 					temperature = <80000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
-				vpu0_alert:vpu-crit {
+				vpu0_crit:vpu-crit {
 					temperature = <100000>;
 					hysteresis = <2000>;
 					type = "critical";
 				};
 			};
+#if (THB_SLICE_0_EN)
+			cooling-maps {
+				map0 {
+					trip = <&vpu0_alert0>;
+					cooling-device = <&vpu_cd_0 0 0>;
+				};
+				map1 {
+					trip = <&vpu0_alert1>;
+					cooling-device = <&vpu_cd_0 0 0>;
+				};
+				map3 {
+					trip = <&vpu0_alert2>;
+					cooling-device = <&vpu_cd_0 0 0>;
+				};
+				map4 {
+					trip = <&vpu0_alert3>;
+					cooling-device = <&vpu_cd_0 1 4>;
+				};
+				map5 {
+					trip = <&vpu0_crit>;
+					cooling-device = <&vpu_cd_0 5 5>;
+				};
+			};
+#endif
 		};
+
 		vpu1 {
 			polling-delay-passive = <1000>;
 			polling-delay = <2000>;
@@ -1855,23 +1896,58 @@
 				/* each zone within the SoC \
 				 * may have its own trips
 				 */
+				 /* temperature in millicelsius */
 				vpu1_alert0: vpu-alert0 {
 					/* millicelsius */
-					temperature = <40000>;
+					temperature = <0>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 				vpu1_alert1: vpu-alert1 {
+					temperature = <40000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				vpu1_alert2: vpu-alert2 {
+					temperature = <60000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				vpu1_alert3: vpu-alert3 {
 					temperature = <80000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
-				vpu1_alert:vpu-crit {
+				vpu1_crit:vpu-crit {
 					temperature = <100000>;
 					hysteresis = <2000>;
 					type = "critical";
 				};
 			};
+#if (THB_SLICE_1_EN)
+			cooling-maps {
+				map0 {
+					trip = <&vpu1_alert0>;
+					cooling-device = <&vpu_cd_1 0 0>;
+				};
+				map1 {
+					trip = <&vpu1_alert1>;
+					cooling-device = <&vpu_cd_1 0 0>;
+				};
+				map3 {
+					trip = <&vpu1_alert2>;
+					cooling-device = <&vpu_cd_1 0 0>;
+				};
+				map4 {
+					trip = <&vpu1_alert3>;
+					cooling-device = <&vpu_cd_1 1 4>;
+				};
+				map5 {
+					trip = <&vpu1_crit>;
+					cooling-device = <&vpu_cd_1 5 5>;
+				};
+			};
+#endif
 		};
 
 		vpu2 {
@@ -1883,23 +1959,59 @@
 				/* each zone within the SoC \
 				 * may have its own trips
 				 */
+				 /* temperature in millicelsius */
 				vpu2_alert0: vpu-alert0 {
 					/* millicelsius */
-					temperature = <40000>;
+					temperature = <0>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 				vpu2_alert1: vpu-alert1 {
+					temperature = <40000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				vpu2_alert2: vpu-alert2 {
+					temperature = <60000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				vpu2_alert3: vpu-alert3 {
 					temperature = <80000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
-				vpu2_alert:vpu-crit {
+				vpu2_crit:vpu-crit {
 					temperature = <100000>;
 					hysteresis = <2000>;
 					type = "critical";
 				};
 			};
+
+#if (THB_SLICE_2_EN)
+			cooling-maps {
+				map0 {
+					trip = <&vpu2_alert0>;
+					cooling-device = <&vpu_cd_2 0 0>;
+				};
+				map1 {
+					trip = <&vpu2_alert1>;
+					cooling-device = <&vpu_cd_2 0 0>;
+				};
+				map3 {
+					trip = <&vpu2_alert2>;
+					cooling-device = <&vpu_cd_2 0 0>;
+				};
+				map4 {
+					trip = <&vpu2_alert3>;
+					cooling-device = <&vpu_cd_2 1 4>;
+				};
+				map5 {
+					trip = <&vpu2_crit>;
+					cooling-device = <&vpu_cd_2 5 5>;
+				};
+			};
+#endif
 		};
 
 		vpu3 {
@@ -1911,23 +2023,58 @@
 				/* each zone within the SoC \
 				 * may have its own trips
 				 */
+				 /* temperature in millicelsius */
 				vpu3_alert0: vpu-alert0 {
 					/* millicelsius */
-					temperature = <40000>;
+					temperature = <0>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
 				vpu3_alert1: vpu-alert1 {
+					temperature = <40000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				vpu3_alert2: vpu-alert2 {
+					temperature = <60000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+				vpu3_alert3: vpu-alert3 {
 					temperature = <80000>;
 					hysteresis = <2000>;
 					type = "passive";
 				};
-				vpu3_alert:vpu-crit {
+				vpu3_crit:vpu-crit {
 					temperature = <100000>;
 					hysteresis = <2000>;
 					type = "critical";
 				};
 			};
+#if (THB_SLICE_3_EN)
+			cooling-maps {
+				map0 {
+					trip = <&vpu3_alert0>;
+					cooling-device = <&vpu_cd_3 0 0>;
+				};
+				map1 {
+					trip = <&vpu3_alert1>;
+					cooling-device = <&vpu_cd_3 0 0>;
+				};
+				map3 {
+					trip = <&vpu3_alert2>;
+					cooling-device = <&vpu_cd_3 0 0>;
+				};
+				map4 {
+					trip = <&vpu3_alert3>;
+					cooling-device = <&vpu_cd_3 1 4>;
+				};
+				map5 {
+					trip = <&vpu3_crit>;
+					cooling-device = <&vpu_cd_3 5 5>;
+				};
+			};
+#endif
 		};
 
 		media0 {
@@ -2583,6 +2730,13 @@
 				intel,vpu-device-family = <THB_FULL_OR_PRIME>;	/* Used for SWID generation; Full=0x1, Prime=0x0 */
 			};
 
+			vpu_cd_0: vpu-cooling-device {
+					compatible = "intel,vpu-cooling-dev";
+					intel,vpu-ipc-id = <0x0>;
+					status = "disabled";
+					#cooling-cells = <2>;
+				};
+
 			vpu0_mm@0 {
 				#intel,smmu_params-cells = <0x5>;
 				compatible  = "intel,vpu";
@@ -2948,6 +3102,13 @@
 				intel,vpu-device-family = <THB_FULL_OR_PRIME>;	/* Used for SWID generation; Full=0x1, Prime=0x0 */
 			};
 
+			vpu_cd_1: vpu-cooling-device {
+					compatible = "intel,vpu-cooling-dev";
+					intel,vpu-ipc-id = <0x1>;
+					status = "disabled";
+					#cooling-cells = <2>;
+				};
+
 			vpu1_mm@0 {
 				#intel,smmu_params-cells = <0x5>;
 				compatible  = "intel,vpu";
@@ -3311,6 +3472,13 @@
 				intel,keembay-vpu-ipc = <&slice2_vpuipc>;
 				intel,vpu-device-family = <THB_FULL_OR_PRIME>;	/* Used for SWID generation; Full=0x1, Prime=0x0 */
 			};
+
+			vpu_cd_2: vpu-cooling-device {
+					compatible = "intel,vpu-cooling-dev";
+					intel,vpu-ipc-id = <0x2>;
+					status = "disabled";
+					#cooling-cells = <2>;
+				};
 
 			vpu2_mm@0 {
 				#intel,smmu_params-cells = <0x5>;
@@ -3676,6 +3844,13 @@
 				intel,keembay-vpu-ipc = <&slice3_vpuipc>;
 				intel,vpu-device-family = <THB_FULL_OR_PRIME>;	/* Used for SWID generation; Full=0x1, Prime=0x0 */
 			};
+
+			vpu_cd_3: vpu-cooling-device {
+					compatible = "intel,vpu-cooling-dev";
+					intel,vpu-ipc-id = <0x3>;
+					status = "disabled";
+					#cooling-cells = <2>;
+				};
 
 			vpu3_mm@0 {
 				#intel,smmu_params-cells = <0x5>;

@@ -13,6 +13,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/reset/thunderbay-reset.h>
 #include <dt-bindings/thermal/thermal.h>
+#include <dt-bindings/power-domain/power_domain_ids.h>
 
 /* referred from include/linux/iommu.h */
 
@@ -2623,6 +2624,10 @@
                         compatible = "thunderbay,hantro";
 			memory-region = <&slice0_pixel_data_cma &slice0_codec_reserved>;
 			mmu-tcu-reg = <0x1 0x85400020>;
+			power-domains = <&scmi_devpd PWR_DOMAIN_VCE_SLICE0>,
+							<&scmi_devpd PWR_DOMAIN_VCDA_SLICE0>,
+							<&scmi_devpd PWR_DOMAIN_VCDB_SLICE0>,
+							<&scmi_devpd PWR_DOMAIN_VCEJ_SLICE0>;
 			resets = <&rst_comss0 TBH_COMSS_MEDIA_VCEJ_CORERST_N>,
 				 <&rst_comss0 TBH_COMSS_MEDIA_VCEJ_ARESET_N>,
 				 <&rst_comss0 TBH_COMSS_MEDIA_VCEJ_PRESET_N>,
@@ -2684,6 +2689,9 @@
                                 // GIC interrupt number: 683 (651 + 32).
                                 interrupts = <0x0 651 0x4>;
                                 interrupt-names = "irq-encA0";
+								pd-index = <3>;
+								reset-index = <0 1 2>;
+								clock-index = <1>;
                                 status = "okay";
                                 dec400encA0@185530000 {
                                      #address-cells = <0x2>;
@@ -2703,6 +2711,9 @@
                                 // GIC interrupt number: 681 (649 + 32).
                                 interrupts = <0x0 649 0x4>;
                                 interrupt-names = "irq-encB0";
+								pd-index = <0>;
+								reset-index = <3 4 5>;
+								clock-index = <3>;
                                 status = "okay";
                                 dec400encB0@185532000 {
                                      #address-cells = <0x2>;
@@ -2728,11 +2739,14 @@
                         decoderA0@18553A000 {
                                 #address-cells = <0x2>;
                                 #size-cells = <0x2>;
-                                reg = <0x1 0x8553A000 0x0 0x650>;
+                                reg = <0x1 0x8553A000 0x0 0x6C0>;
                                 reg-names = "reg-decA0";
                                 // GIC interrupt number: 679 (647 + 32).
                                 interrupts = <0x0 647 0x4>;
                                 interrupt-names = "irq-decA0";
+								pd-index = <1>;
+								reset-index = <6 7 8>;
+								clock-index = <5>;
                                 status = "okay";
                                 dec400decA0@185534000 {
                                      #address-cells = <0x2>;
@@ -2767,11 +2781,14 @@
                         };
 
                         decoderB0@18553B000 {
-                                reg = <0x1 0x8553B000 0x0 0x650>;
+                                reg = <0x1 0x8553B000 0x0 0x6C0>;
                                 reg-names = "reg-decB0";
                                 // GIC interrupt number: 676 (644 + 32).
                                 interrupts = <0x0 644 0x4>;
                                 interrupt-names = "irq-decB0";
+								pd-index = <2>;
+								reset-index = <9 10 11>;
+								clock-index = <7>;
                                 status = "okay";
                                 dec400decB0@185536000 {
                                      #address-cells = <0x2>;
@@ -2992,6 +3009,10 @@
                          compatible = "thunderbay,hantro";
                          memory-region = <&slice1_pixel_data_cma &slice1_codec_reserved>;
                          mmu-tcu-reg = <0x2 0x85400020>;
+						 power-domains = <&scmi_devpd PWR_DOMAIN_VCE_SLICE1>,
+										 <&scmi_devpd PWR_DOMAIN_VCDA_SLICE1>,
+										 <&scmi_devpd PWR_DOMAIN_VCDB_SLICE1>,
+										 <&scmi_devpd PWR_DOMAIN_VCEJ_SLICE1>;
                          resets = <&rst_comss1 TBH_COMSS_MEDIA_VCEJ_CORERST_N>,
 			 <&rst_comss1 TBH_COMSS_MEDIA_VCEJ_ARESET_N>,
                          <&rst_comss1 TBH_COMSS_MEDIA_VCEJ_PRESET_N>,
@@ -3053,6 +3074,9 @@
                                 // GIC interrupt number: 652 (620 + 32).
                                 interrupts = <0x0 620 0x4>;
                                 interrupt-names = "irq-encA1";
+								pd-index = <3>;
+								reset-index = <0 1 2>;
+								clock-index = <1>;
                                 status = "okay";
                                 dec400encA1@285530000 {
                                      #address-cells = <0x2>;
@@ -3072,6 +3096,9 @@
                                 // GIC interrupt number: 650 (618 + 32).
                                 interrupts = <0x0 618 0x4>;
                                 interrupt-names = "irq-encB1";
+								pd-index = <0>;
+								reset-index = <3 4 5>;
+								clock-index = <3>;
                                 status = "okay";
                                 dec400encB1@285532000 {
                                      #address-cells = <0x2>;
@@ -3097,11 +3124,14 @@
                         decoderA1@28553A000 {
                                 #address-cells = <0x2>;
                                 #size-cells = <0x2>;
-                                reg = <0x2 0x8553A000 0x0 0x650>;
+                                reg = <0x2 0x8553A000 0x0 0x6C0>;
                                 reg-names = "reg-decA1";
                                 // GIC interrupt number: 648 (616 + 32).
                                 interrupts = <0x0 616 0x4>;
                                 interrupt-names = "irq-decA1";
+								pd-index = <1>;
+								reset-index = <6 7 8>;
+								clock-index = <5>;
                                 status = "okay";
                                 dec400decA1@285534000 {
                                      #address-cells = <0x2>;
@@ -3136,11 +3166,14 @@
                         };
 
                         decoderB1@28553B000 {
-                                reg = <0x2 0x8553B000 0x0 0x650>;
+                                reg = <0x2 0x8553B000 0x0 0x6C0>;
                                 reg-names = "reg-decB1";
                                 // GIC interrupt number: 645 (613 + 32).
                                 interrupts = <0x0 613 0x4>;
                                 interrupt-names = "irq-decB1";
+								pd-index = <2>;
+								reset-index = <9 10 11>;
+								clock-index = <7>;
                                 status = "okay";
                                 dec400decB1@285536000 {
                                      #address-cells = <0x2>;
@@ -3356,6 +3389,10 @@
                          compatible = "thunderbay,hantro";
                          memory-region = <&slice2_pixel_data_cma &slice2_codec_reserved>;
                          mmu-tcu-reg = <0x3 0x85400020>;
+						 power-domains = <&scmi_devpd PWR_DOMAIN_VCE_SLICE2>,
+										 <&scmi_devpd PWR_DOMAIN_VCDA_SLICE2>,
+										 <&scmi_devpd PWR_DOMAIN_VCDB_SLICE2>,
+										 <&scmi_devpd PWR_DOMAIN_VCEJ_SLICE2>;
                          resets = <&rst_comss2 TBH_COMSS_MEDIA_VCEJ_CORERST_N>,
                          <&rst_comss2 TBH_COMSS_MEDIA_VCEJ_ARESET_N>,
                          <&rst_comss2 TBH_COMSS_MEDIA_VCEJ_PRESET_N>,
@@ -3417,6 +3454,9 @@
                                 // GIC interrupt number: 621 (589 + 32).
                                 interrupts = <0x0 589 0x4>;
                                 interrupt-names = "irq-encA2";
+								pd-index = <3>;
+								reset-index = <0 1 2>;
+								clock-index = <1>;
                                 status = "okay";
                                 dec400encA2@385530000 {
                                      #address-cells = <0x2>;
@@ -3436,6 +3476,9 @@
                                 // GIC interrupt number: 619 (587 + 32).
                                 interrupts = <0x0 587 0x4>;
                                 interrupt-names = "irq-encB2";
+								pd-index = <0>;
+								reset-index = <3 4 5>;
+								clock-index = <3>;
                                 status = "okay";
                                 dec400encB2@385532000 {
                                      #address-cells = <0x2>;
@@ -3461,11 +3504,14 @@
                         decoderA2@38553A000 {
                                 #address-cells = <0x2>;
                                 #size-cells = <0x2>;
-                                reg = <0x3 0x8553A000 0x0 0x650>;
+                                reg = <0x3 0x8553A000 0x0 0x6C0>;
                                 reg-names = "reg-decA2";
                                 // GIC interrupt number: 617 (585 + 32).
                                 interrupts = <0x0 585 0x4>;
                                 interrupt-names = "irq-decA2";
+								pd-index = <1>;
+								reset-index = <6 7 8>;
+								clock-index = <5>;
                                 status = "okay";
                                 dec400decA2@385534000 {
                                      #address-cells = <0x2>;
@@ -3500,11 +3546,14 @@
                         };
 
                         decoderB2@38553B000 {
-                                reg = <0x3 0x8553B000 0x0 0x650>;
+                                reg = <0x3 0x8553B000 0x0 0x6C0>;
                                 reg-names = "reg-decB2";
                                 // GIC interrupt number: 614 (582 + 32).
                                 interrupts = <0x0 582 0x4>;
                                 interrupt-names = "irq-decB2";
+								pd-index = <2>;
+								reset-index = <9 10 11>;
+								clock-index = <7>;
                                 status = "okay";
                                 dec400decB2@385536000 {
                                      #address-cells = <0x2>;
@@ -3720,6 +3769,10 @@
                          compatible = "thunderbay,hantro";
                          memory-region = <&slice3_pixel_data_cma &slice3_codec_reserved>;
                          mmu-tcu-reg = <0x4 0x85400020>;
+						 power-domains = <&scmi_devpd PWR_DOMAIN_VCE_SLICE3>,
+										 <&scmi_devpd PWR_DOMAIN_VCDA_SLICE3>,
+										 <&scmi_devpd PWR_DOMAIN_VCDB_SLICE3>,
+										 <&scmi_devpd PWR_DOMAIN_VCEJ_SLICE3>;
                          resets = <&rst_comss3 TBH_COMSS_MEDIA_VCEJ_CORERST_N>,
                          <&rst_comss3 TBH_COMSS_MEDIA_VCEJ_ARESET_N>,
                          <&rst_comss3 TBH_COMSS_MEDIA_VCEJ_PRESET_N>,
@@ -3781,6 +3834,9 @@
                                 // GIC interrupt number: 590 (558 + 32).
                                 interrupts = <0x0 558 0x4>;
                                 interrupt-names = "irq-encA3";
+								pd-index = <3>;
+								reset-index = <0 1 2>;
+								clock-index = <1>;
                                 status = "okay";
                                 dec400encA3@485530000 {
                                      #address-cells = <0x2>;
@@ -3800,6 +3856,9 @@
                                 // GIC interrupt number: 588 (556 + 32).
                                 interrupts = <0x0 556 0x4>;
                                 interrupt-names = "irq-encB3";
+								pd-index = <0>;
+								reset-index = <3 4 5>;
+								clock-index = <3>;
                                 status = "okay";
                                 dec400encB3@485532000 {
                                      #address-cells = <0x2>;
@@ -3825,11 +3884,14 @@
                         decoderA3@48553A000 {
                                 #address-cells = <0x2>;
                                 #size-cells = <0x2>;
-                                reg = <0x4 0x8553A000 0x0 0x650>;
+                                reg = <0x4 0x8553A000 0x0 0x6C0>;
                                 reg-names = "reg-decA3";
                                 // GIC interrupt number: 586 (554 + 32).
                                 interrupts = <0x0 554 0x4>;
                                 interrupt-names = "irq-decA3";
+								pd-index = <1>;
+								reset-index = <6 7 8>;
+								clock-index = <5>;
                                 status = "okay";
                                 dec400decA3@485534000 {
                                      #address-cells = <0x2>;
@@ -3864,11 +3926,14 @@
                         };
 
                         decoderB3@48553B000 {
-                                reg = <0x4 0x8553B000 0x0 0x650>;
+                                reg = <0x4 0x8553B000 0x0 0x6C0>;
                                 reg-names = "reg-decB3";
                                 // GIC interrupt number: 583 (551 + 32).
                                 interrupts = <0x0 551 0x4>;
                                 interrupt-names = "irq-decB3";
+								pd-index = <2>;
+								reset-index = <9 10 11>;
+								clock-index = <7>;
                                 status = "okay";
                                 dec400decB3@485536000 {
                                      #address-cells = <0x2>;

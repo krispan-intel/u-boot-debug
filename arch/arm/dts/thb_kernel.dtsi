@@ -1024,7 +1024,7 @@
 			status = "disabled";
 
 			slave_device {
-				compatible = "slave-24c02";
+				compatible = "slave-thb-tj";
 				reg = <0x4000005a>;
 				status = "okay";
 			};
@@ -1220,10 +1220,6 @@
 			compatible = "intel,hddl-client";
 			xlink_chan = <1080>;
 			i2c_xlink_chan = <1081>;
-			board-id-gpios = <&gpio0 19 0
-					&gpio0 17 0
-					&gpio0  16 0
-					&gpio0  15 0>;
 			soc-reset = <&hddl_reset>;
 			kmb_xlink_tj@5a {
 				status = "okay";
@@ -1242,21 +1238,29 @@
 				reg = <0x49>;
 				#endif
 				remote-host = <0x4>;
-				bus = <0xffff>;
+				bus = <0x0>;
 			};
 			adc081c@51 {
 				status = "okay";
                                 compatible = "adc081c";
                                 reg = <0x51>;
                                 remote-host = <0x4>;
-                                bus = <0xffff>;
+				bus = <0x0>;
                         };
+			ads7142@18 {
+				status = "disabled";
+				compatible = "ads7142";
+				reg = <0x18>;
+				remote-host = <0x4>;
+				bus = <0x0>;
+			};
+
 			emc2103@2e {
 				status = "okay";
 				compatible = "emc2103";
 				reg = <0x2e>;
 				remote-host = <0x4>;
-				bus = <0xffff>;
+				bus = <0x0>;
 			};
 
 		 };
@@ -1267,11 +1271,13 @@
 					id = <0>;
                                         io-exp-name = "pca9575";
 	                                io-exp-addr = <0x20 0x2>;
+					pci-switch = <3>;
                                };
                                soc1 {
                                        id = <1>;
                                        io-exp-name = "pca9575";
                                        io-exp-addr = <0x20 0xA>;
+				       pci-switch = <7>;
                                };
                         };
 			board1 {
@@ -1280,11 +1286,13 @@
 					id = <0>;
                                         io-exp-name = "pca9575";
 	                                io-exp-addr = <0x21 0x2>;
+					pci-switch = <3>;
                                };
                                soc1 {
                                        id = <1>;
                                        io-exp-name = "pca9575";
                                        io-exp-addr = <0x21 0xA>;
+				       pci-switch = <7>;
                                };
 			};
 			board2 {
@@ -1293,11 +1301,13 @@
 					id = <0>;
                                         io-exp-name = "pca9575";
 	                                io-exp-addr = <0x22 0x2>;
+					pci-switch = <3>;
                                };
                                soc1 {
                                        id = <1>;
                                        io-exp-name = "pca9575";
                                        io-exp-addr = <0x22 0xA>;
+				       pci-switch = <7>;
                                };
 			};
 			board3 {
@@ -1306,11 +1316,13 @@
 					id = <0>;
                                         io-exp-name = "pca9575";
 	                                io-exp-addr = <0x23 0x2>;
+					pci-switch = <3>;
                                };
                                soc1 {
                                        id = <1>;
                                        io-exp-name = "pca9575";
                                        io-exp-addr = <0x23 0xA>;
+				       pci-switch = <7>;
                                };
 			};
 			board4 {
@@ -1319,11 +1331,13 @@
 					id = <0>;
                                         io-exp-name = "pca9575";
 	                                io-exp-addr = <0x24 0x2>;
+					pci-switch = <3>;
                                };
                                soc1 {
                                        id = <1>;
                                        io-exp-name = "pca9575";
                                        io-exp-addr = <0x24 0xA>;
+				       pci-switch = <7>;
                                };
 			};
 			board5 {
@@ -1332,11 +1346,13 @@
 					id = <0>;
                                         io-exp-name = "pca9575";
 	                                io-exp-addr = <0x25 0x2>;
+					pci-switch = <3>;
                                };
                                soc1 {
                                        id = <1>;
                                        io-exp-name = "pca9575";
                                        io-exp-addr = <0x25 0xA>;
+				       pci-switch = <7>;
                                };
 			};
 			board6 {
@@ -1345,11 +1361,13 @@
 					id = <0>;
                                         io-exp-name = "pca9575";
 	                                io-exp-addr = <0x26 0x2>;
+					pci-switch = <3>;
                                };
                                soc1 {
                                        id = <1>;
                                        io-exp-name = "pca9575";
                                        io-exp-addr = <0x26 0xA>;
+				       pci-switch = <7>;
                                };
 			};
 			board7 {
@@ -1358,11 +1376,13 @@
 					id = <0>;
                                         io-exp-name = "pca9575";
 	                                io-exp-addr = <0x27 0x2>;
+					pci-switch = <3>;
                                };
                                soc1 {
                                        id = <1>;
                                        io-exp-name = "pca9575";
                                        io-exp-addr = <0x27 0xA>;
+				       pci-switch = <7>;
                                };
 			};
 			board8 {
@@ -1371,11 +1391,13 @@
                                        id = <0>;
                                        io-exp-name = "pca9575";
                                        io-exp-addr = <0x28 0x2>;
+				       pci-switch = <3>;
                                };
 				soc1 {
                                       id = <1>;
                                        io-exp-name = "pca9575";
                                        io-exp-addr = <0x28 0xA>;
+				       pci-switch = <7>;
                                };
 			};
 			board9 {
@@ -1384,11 +1406,13 @@
                                        id = <0>;
                                        io-exp-name = "pca9575";
                                        io-exp-addr = <0x29 0x2>;
+				       pci-switch = <3>;
                                };
                                soc1 {
                                        id = <1>;
                                        io-exp-name = "pca9575";
                                        io-exp-addr = <0x29 0xA>;
+				       pci-switch = <7>;
                               };
 			};
 			board10 {
@@ -1397,11 +1421,13 @@
 					id = <0>;
                                         io-exp-name = "pca9575";
 	                                io-exp-addr = <0x2A 0x2>;
+					pci-switch = <3>;
                                };
                                soc1 {
                                        id = <1>;
                                        io-exp-name = "pca9575";
                                        io-exp-addr = <0x2A 0xA>;
+				       pci-switch = <7>;
                                };
 			};
 			board11 {
@@ -1410,11 +1436,13 @@
 					id = <0>;
                                         io-exp-name = "pca9575";
 	                                io-exp-addr = <0x2B 0x2>;
+					pci-switch = <3>;
                                };
                                soc1 {
                                        id = <1>;
                                        io-exp-name = "pca9575";
                                        io-exp-addr = <0x2B 0xA>;
+				       pci-switch = <7>;
                                };
 			};
 			board12 {
@@ -1423,11 +1451,13 @@
 					id = <0>;
                                         io-exp-name = "pca9575";
 	                                io-exp-addr = <0x2C 0x2>;
+					pci-switch = <3>;
                                };
                                soc1 {
                                        id = <1>;
                                        io-exp-name = "pca9575";
                                        io-exp-addr = <0x2C 0xA>;
+				       pci-switch = <7>;
                                };
 			};
 			board13 {
@@ -1436,11 +1466,13 @@
 					id = <0>;
                                         io-exp-name = "pca9575";
 	                                io-exp-addr = <0x2D 0x2>;
+					pci-switch = <3>;
                                };
                                soc1 {
                                        id = <1>;
                                        io-exp-name = "pca9575";
                                        io-exp-addr = <0x2D 0xA>;
+				       pci-switch = <7>;
                                };
 			};
 			board14 {
@@ -1449,11 +1481,13 @@
 					id = <0>;
                                         io-exp-name = "pca9575";
 	                                io-exp-addr = <0x2E 0x2>;
+					pci-switch = <3>;
                                };
                                soc1 {
                                        id = <1>;
                                        io-exp-name = "pca9575";
                                        io-exp-addr = <0x2E 0xA>;
+				       pci-switch = <7>;
                                };
 			};
 			board15 {
@@ -1462,11 +1496,13 @@
 					id = <0>;
                                         io-exp-name = "pca9575";
 	                                io-exp-addr = <0x2F 0x2>;
+					pci-switch = <3>;
                                };
                                soc1 {
                                        id = <1>;
                                        io-exp-name = "pca9575";
                                        io-exp-addr = <0x2F 0xA>;
+				       pci-switch = <7>;
                                };
 			};
 		};

@@ -417,6 +417,40 @@ static int fdt_thb_i2c3_fixup(void *fdt)
 	return 0;
 }
 
+static int fdt_thb_evt2_hddl_fixup(void *fdt, int hddl_dev_off)
+{
+	int node = 0, ret;
+
+	fdt_for_each_subnode(node, fdt, hddl_dev_off) {
+		int len;
+		const char *node_name;
+		int bus = 1;
+
+		node_name = fdt_get_name(fdt, node, &len);
+		if (len < 0) {
+			log_err("unable to get node name.\n");
+			return len;
+		}
+		if (!strcmp(node_name, "kmb_xlink_tj@5a"))
+			bus = 4;
+
+		if (!strcmp(node_name, "adc081c@51"))
+			ret = fdt_setprop_string(fdt, node, "status", "disabled");
+
+		if (!strcmp(node_name, "ads7142@18"))
+			ret = fdt_setprop_string(fdt, node, "status", "okay");
+
+		ret = fdt_setprop_u32(fdt, node, "bus",
+				      bus);
+		if (ret) {
+			log_err("Failed to update board id in hddl_device node\n");
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
 static int fdt_thb_hddl_dev_fixup(void *fdt)
 {
 	int hddl_dev_off = 0, tsens_off = 0, node = 0;
@@ -439,11 +473,27 @@ static int fdt_thb_hddl_dev_fixup(void *fdt)
         	log_err("Failed to update id in hddl_device node\n");
 	        return ret;
 	}
+	ret = fdt_setprop_u32(fdt, hddl_dev_off, "board_id",
+			      plat_bl_ctx.io_exp_addr_bits);
+	if (ret) {
+		log_err("Failed to update board id in hddl_device node\n");
+		return ret;
+	}
+
 	ret = fdt_setprop_u32(fdt, hddl_dev_off, "board_type",
         	              plat_bl_ctx.board_id);
 	if (ret) {
         	log_err("Failed to update board id in hddl_device node\n");
 	        return ret;
+	}
+
+	/* BOARD_TYPE_HDDLF2 is for EVT2 */
+	if (board_id == BOARD_TYPE_HDDLF2) {
+		ret = fdt_thb_evt2_hddl_fixup(fdt, hddl_dev_off);
+		if (ret) {
+			log_err("Failed to update bus num for evt2 sensors\n");
+			return ret;
+		}
 	}
 
 	tsens_off =  fdt_path_offset(fdt, "/soc/tsens");

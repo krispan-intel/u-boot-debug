@@ -601,10 +601,18 @@
 &vpu_smmu0 {
 	status = "okay";
 };
+
+&vpu_cd_0 {
+	status = "okay";
+};
 #endif
 
 #if (THB_SLICE_1_EN)
 &vpu_smmu1 {
+	status = "okay";
+};
+
+&vpu_cd_1 {
 	status = "okay";
 };
 #endif
@@ -613,10 +621,18 @@
 &vpu_smmu2 {
 	status = "okay";
 };
+
+&vpu_cd_2 {
+	status = "okay";
+};
 #endif
 
 #if (THB_SLICE_3_EN)
 &vpu_smmu3 {
+	status = "okay";
+};
+
+&vpu_cd_3 {
 	status = "okay";
 };
 #endif

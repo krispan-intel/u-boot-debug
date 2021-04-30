@@ -599,7 +599,13 @@ static int fdt_thb_boot_info(void *fdt)
 	boot_info_off =  fdt_path_offset(fdt, "/boot_info");
 	if (boot_info_off < 0) {
 		log_err("Failed to find boot_info node.\n");
-		return boot_info_off;
+		boot_info_off = fdt_add_subnode(fdt, 0, "boot_info");
+		if (boot_info_off < 0) {
+			log_err("Failed to create boot_info node.\n");
+			return ret;
+		}
+
+		boot_info_off =  fdt_path_offset(fdt, "/boot_info");
 	}
 
 	if (boot_interface == MA_BOOT_INTF_EMMC)

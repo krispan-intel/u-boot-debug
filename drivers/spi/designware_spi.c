@@ -59,6 +59,45 @@ DECLARE_GLOBAL_DATA_PTR;
 #define DW_SPI_VERSION                   0x5c
 #define DW_SPI_DR                        0x60
 
+#ifdef CONFIG_PLATFORM_THUNDERBAY
+
+/* Bit fields in CTRLR0 for DWC_APB_SSI */
+#define CTRLR0_APB_SSTE                 BIT(24)
+#define CTRLR0_APB_SPI_FRF_MASK         GENMASK(22, 21)
+#define CTRLR0_APB_DFS_32_MASK          GENMASK(20, 16)
+#define CTRLR0_APB_CFS_MASK             GENMASK(15, 12)
+#define CTRLR0_APB_SRL                  BIT(11)
+#define CTRLR0_APB_SLV_OE               BIT(10)
+#define CTRLR0_APB_TMOD_OFFSET          8
+#define CTRLR0_APB_TMOD_MASK            GENMASK(9, 8)
+#define SPI_TRANSFER_MODE_APB_OFFSET    6
+#define CTRLR0_APB_SCPOL                BIT(7)
+#define CTRLR0_APB_SCPH                 BIT(6)
+#define CTRLR0_APB_FRF_OFFSET           4
+#define CTRLR0_APB_FRF_MASK             GENMASK(5, 4)
+#define CTRLR0_APB_DFS_OFFSET           0
+#define CTRLR0_APB_DFS_MASK             GENMASK(3, 0)
+
+/* Bit fields in CTRLR0 for DWC_AHB_SSI */
+#define CTRLR0_AHB_SPI_IS_MST           BIT(31)
+#define CTRLR0_AHB_SPI_HYPERBUS_EN      BIT(24)
+#define CTRLR0_AHB_SPI_FRF_MASK         GENMASK(23, 22)
+#define CTRLR0_AHB_CFS_MASK             GENMASK(19, 16)
+#define CTRLR0_AHB_SSTE                 BIT(14)
+#define CTRLR0_AHB_SRL                  BIT(13)
+#define CTRLR0_AHB_SLV_OE               BIT(12)
+#define CTRLR0_AHB_TMOD_OFFSET          10
+#define CTRLR0_AHB_TMOD_MASK            GENMASK(11, 10)
+#define SPI_TRANSFER_MODE_AHB_OFFSET    8
+#define CTRLR0_AHB_SCPOL                BIT(9)
+#define CTRLR0_AHB_SCPH                 BIT(8)
+#define CTRLR0_AHB_FRF_OFFSET           6
+#define CTRLR0_AHB_FRF_MASK             GENMASK(7, 6)
+#define CTRLR0_AHB_DFS_OFFSET           0
+#define CTRLR0_AHB_DFS_MASK             GENMASK(4, 0)
+
+#endif /* End of CONFIG_PLATFORM_THUNDERBAY */
+
 /* Bit fields in CTRLR0 */
 /*
  * Only present when SSI_MAX_XFER_SIZE=16. This is the default, and the only
@@ -560,6 +599,19 @@ static int dw_spi_xfer(struct udevice *dev, unsigned int bitlen,
 		external_cs_manage(dev, false);
 	}
 
+#ifdef CONFIG_PLATFORM_THUNDERBAY
+	if (priv->ssi_core_type == DWC_AHB_SSI) {
+		cr0 = (priv->bits_per_word - 1) |
+			(priv->type << CTRLR0_AHB_FRF_OFFSET) |
+			(priv->mode << SPI_TRANSFER_MODE_AHB_OFFSET) |
+			(priv->tmode << CTRLR0_AHB_TMOD_OFFSET);
+	} else {
+		cr0 = (priv->bits_per_word - 1) |
+			(priv->type << CTRLR0_APB_FRF_OFFSET) |
+			(priv->mode << SPI_TRANSFER_MODE_APB_OFFSET) |
+			(priv->tmode << CTRLR0_APB_TMOD_OFFSET);
+	}
+#endif
 	if (rx && tx) {
 		priv->tmode = CTRLR0_TMOD_TR;
 	} else if (rx) {
@@ -573,6 +625,15 @@ static int dw_spi_xfer(struct udevice *dev, unsigned int bitlen,
 	}
 	cr0 = priv->update_cr0(priv);
 
+#ifdef CONFIG_PLATFORM_THUNDERBAY
+	if (priv->ssi_core_type == DWC_AHB_SSI) {
+		cr0 &= ~CTRLR0_AHB_TMOD_MASK;
+		cr0 |= (priv->tmode << CTRLR0_AHB_TMOD_OFFSET);
+	} else {
+		cr0 &= ~CTRLR0_APB_TMOD_MASK;
+		cr0 |= (priv->tmode << CTRLR0_APB_TMOD_OFFSET);
+	}
+#endif
 	priv->len = bitlen >> 3;
 
 	priv->tx = (void *)tx;
@@ -585,6 +646,15 @@ static int dw_spi_xfer(struct udevice *dev, unsigned int bitlen,
 
 	dev_dbg(dev, "cr0=%08x rx=%p tx=%p len=%d [bytes]\n", cr0, rx, tx,
 		priv->len);
+
+#ifdef CONFIG_PLATFORM_THUNDERBAY
+	if (priv->ssi_core_type == DWC_AHB_SSI) {
+		cr0 |= CTRLR0_AHB_SPI_IS_MST;
+		dev_dbg(dev, "%s: set SPI as Master\n", __func__);
+	}
+	cr0 |= CTRLR0_AHB_SSTE;
+#endif
+
 	/* Reprogram cr0 only if changed */
 	if (dw_read(priv, DW_SPI_CTRLR0) != cr0) {
 		dw_write(priv, DW_SPI_CTRLR0, cr0);
@@ -598,6 +668,7 @@ static int dw_spi_xfer(struct udevice *dev, unsigned int bitlen,
 	//cs = spi_chip_select(dev);
 	//dw_write(priv, DW_SPI_SER, 1 << cs);
 	cs = 0;
+	dw_write(priv, DW_SPI_SER, 1 << cs);
 
 	/* Enable controller after writing control registers */
 	dw_write(priv, DW_SPI_SSIENR, 1);
@@ -817,6 +888,10 @@ static const struct udevice_id dw_spi_ids[] = {
 	{ .compatible = "mscc,jaguar2-spi", .data = (ulong)dw_spi_apb_init },
 	{ .compatible = "snps,axs10x-spi", .data = (ulong)dw_spi_apb_init },
 	{ .compatible = "snps,hsdk-spi", .data = (ulong)dw_spi_apb_init },
+#ifdef CONFIG_PLATFORM_THUNDERBAY
+	{ .compatible = "snps,dw-apb-ssi", .data = (ulong)dw_spi_dwc_init },
+	{ .compatible = "snps,dw-ahb-ssi", .data = (ulong)dw_spi_dwc_init },
+#endif
 	{ }
 };
 

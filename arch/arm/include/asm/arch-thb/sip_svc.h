@@ -22,9 +22,9 @@
 #include <cpu_func.h>
 
 #define THB_SIP_SVC_VPU_BOOT_FN_ID		(0x8200ff10)
-#define THB_SIP_SVC_IMR_SETUP			(0x8200ff12)
-#define THB_SIP_SVC_IMR_CLEAR			(0x8200ff13)
-#define THB_SIP_SVC_IMR_FULL_DDR_A53_ONLY	(0x8200ff14)
+#define THB_SIP_SVC_IMR_PCIE_SETUP		(0x8200ff12)
+#define TMB_SIP_SVC_IMR_PCIE_CLEAR		(0x8200ff13)
+#define THB_SIP_SVC_BOOT_IMR_KERNEL_RUNTIME	(0x8200ff14)
 #define THB_SIP_SVC_BOOT_ECDSA_P384_VERIFY	(0x8200ff0B)
 #define THB_SIP_SVC_BL1_CTX			(0x8200ff08)
 #define THB_SIP_SVC_BL_CTX			(0x8200ff09)
@@ -76,43 +76,31 @@ enum soc_efuse_write_flags {
         SOC_EFUSE_FLAG_REPAIR = 4
 };
 
+/* @sip_svc_imr_pcie_enable_firewall: Enable PCIE firewall registers
+ * to allow access to DRAM region for PCIE boot.
+*/
 
-/**
- * sip_svc_imr_setup() - Set up an Isolated Memory Region (IMR)
- * @imr:		The IMR to be used.
- * @imr_base:		Base address of IMR (must be a multiple of imr_size).
- * @imr_size:		Size of IMR in bytes (must be a power of 2).
- * @init_rd_mask:	Initiator read mask (0 = access, 1 = no access).
- * @init_wr_mask:	Initiator write mask (0 = access, 1 = no access).
- *
- * The access policy for the provided IMR will be configured for all initiators
- * in the system by means of the provided read/write bit masks.
- *
- * Return: 0 for success, anything else for failure.
- */
-static inline int sip_svc_imr_setup(enum thb_imr imr, uint64_t imr_base,
-				    uint64_t imr_size, uint64_t init_rd_mask,
-				    uint64_t init_wr_mask)
+static inline int sip_svc_imr_pcie_enable_firewall()
 {
-	struct arm_smccc_res res = { 0 };
+        struct arm_smccc_res res = { 0 };
 
-	arm_smccc_smc(THB_SIP_SVC_IMR_SETUP, imr, imr_base, imr_size,
-		      init_rd_mask, init_wr_mask, 0, 0, &res);
+        arm_smccc_smc(THB_SIP_SVC_IMR_PCIE_SETUP, 0, 0, 0,
+                      0, 0, 0, 0, &res);
 
-	return res.a0;
+        return res.a0;
 }
 
 /*
- * sip_svc_imr_clear() - Clear an Isolated Memory Region (IMR).
- * @imr: The IMR to be cleared.
+ * sip_svc_imr_pcie_disable_firewall() - Disable PCIE firewall register
+ * to not allow access to DRAM region
  *
  * Return: 0 for success, anything else for failure.
  */
-static inline int sip_svc_imr_clear(enum thb_imr imr)
+static inline int sip_svc_imr_pcie_disable_firewall()
 {
 	struct arm_smccc_res res = { 0 };
 
-	arm_smccc_smc(THB_SIP_SVC_IMR_CLEAR, imr, 0, 0, 0, 0, 0, 0,
+	arm_smccc_smc(TMB_SIP_SVC_IMR_PCIE_CLEAR, 0, 0, 0, 0, 0, 0, 0,
 		      &res);
 
 	return res.a0;
@@ -120,18 +108,16 @@ static inline int sip_svc_imr_clear(enum thb_imr imr)
 
 /**
  * sip_svc_imr_protect_full_ddr() - Set up a special IMR protecting entire DDR.
- * @imr: The IMR to be used.
- *
- * The specified IMR is configured to cover the entire DDR and allow access to
- * A53 only (in any mode).
- *
+ * Enable CPU master to access DRAM required for kernel booting.
+ * Enable non-cpu master EMMC0 to access DRAM for kernel booting.
+ * Enable PCIE to access DRAM region for Xlink to work.
  * Return: 0 for success, anything else for failure.
  */
-static inline int sip_svc_imr_protect_full_ddr(enum thb_imr imr)
+static inline int sip_svc_imr_protect_full_ddr()
 {
 	struct arm_smccc_res res = { 0 };
 
-	arm_smccc_smc(THB_SIP_SVC_IMR_FULL_DDR_A53_ONLY, imr, 0, 0, 0, 0, 0, 0,
+	arm_smccc_smc(THB_SIP_SVC_BOOT_IMR_KERNEL_RUNTIME, 0, 0, 0, 0, 0, 0, 0,
 		      &res);
 
 	return res.a0;

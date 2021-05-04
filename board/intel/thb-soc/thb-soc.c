@@ -1176,6 +1176,9 @@ static void setup_boot_mode(void)
 		pr_info("Open Boot\n");
 	} else  {
 		pr_info("Secure Boot\n");
+		if (env_set_ulong("SECURE_SKU", 1) == 0) {
+			pr_info("SECURE_SKU is set\n");
+		}
 	}
 
 	switch (boot_interface) {
@@ -1469,26 +1472,28 @@ void board_preboot_os(void)
 		if (thb_tpm_close()) {
 			board_boot_fail(SECURITY_FAIL_TPM_DEINIT);
 		}
-	}
+
 #if defined(CONFIG_THUNDERBAY_MEM_PROTECT)
-	if (thb_imr_preboot_os()) {
-		/* TODO: handle security issue properly. */
-		hang();
-	}
+		/* Below call will trigger SMC and call BL31 to setup
+		 * Linux runtime firewall and lock the firewall setting.
+		 */
+		printf("%s: Firewall: Set Kernel Firewall\n",__func__);
+		if (thb_imr_preboot_start()) {
+			printf("%s: error: IMR setup failed\n", __func__);
+			hang();
+		}
+
+		if (thb_imr_preboot_os()) {
+			hang();
+		}
 #endif  /* CONFIG_THUNDERBAY_MEM_PROTECT */
+
+	}
 }
 
 void board_bootm_start(void)
 {
-#ifndef CONFIG_PLATFORM_THUNDERBAY
-	/* TODO: IMR is not ready yet. Enable once IMR is ready*/
-#if defined(CONFIG_THUNDERBAY_MEM_PROTECT)
-	if (thb_imr_bootm_start()) {
-		printf("%s: error: IMR setup failed\n", __func__);
-		hang();
-	}
-#endif  /* CONFIG_THUNDERBAY_MEM_PROTECT */
-#endif
+
 }
 
 phys_size_t get_effective_memsize(void)

@@ -30,6 +30,7 @@
 #include <version.h>
 #include "thb-imr.h"
 #include "thb_pad_cfg.h"
+#include "thb_ddr_prof.h"
 
 #define GPIO_MICRON_FLASH_PULL_UP       20
 
@@ -1681,4 +1682,14 @@ void config_dtb_blob(void)
 	}
 #endif
 	return;
+}
+
+int ddr_prof_setup_boot_args(void)
+{
+	if (ddr_prof_add_boot_args(thb_full, slice)) {
+		pr_info("%s- Failed to add ddr profiling arguments\n", __func__);
+		return 1;
+	}
+
+	return 0;
 }

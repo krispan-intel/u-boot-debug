@@ -575,6 +575,10 @@ int image_setup_libfdt(bootm_headers_t *images, void *blob,
 	}
 #endif
 
+	if (ddr_prof_setup_boot_args()) {
+		printf("ERROR: Failed to setup ddr profiling arguments.\n");
+	}
+
 	if (fdt_chosen(blob) < 0) {
 		printf("ERROR: /chosen node create failed\n");
 		goto err;

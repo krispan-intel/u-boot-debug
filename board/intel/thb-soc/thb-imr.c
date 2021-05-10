@@ -130,7 +130,7 @@ static int set_up_imr(enum thb_imr imr, u64 tgt_addr, u64 tgt_size,
  */
 int thb_imr_post_u_boot_reloc(void)
 {
-	int rc;
+	int rc = 0;
 
 #if defined(CONFIG_THUNDERBAY_MEM_PROTECT_U_BOOT)
 	u64 imr_base, imr_size, u_boot_base, u_boot_size;
@@ -149,19 +149,31 @@ int thb_imr_post_u_boot_reloc(void)
 
 	/* Remove the global IMR set up by BL2. */
 	/* TODO: For Thunderbay, IMR is disabled.*/
-	return 0;
+	return rc;
 }
 
+#if defined(CONFIG_THUNDERBAY_MEM_PROTECT)
 /*
  * This function is called at the beginning of the bootm booting process (i.e.,
  * before the FIT is authenticated).
  *
  * We use it to set up the IMR protecting the entire DDR.
  */
-int thb_imr_bootm_start(void)
+int thb_imr_preboot_start(void)
 {
-	return sip_svc_imr_protect_full_ddr(FULL_DDR_IMR);
+	return sip_svc_imr_protect_full_ddr();
 }
+
+int thb_imr_pcie_enable_firewall()
+{
+	return sip_svc_imr_pcie_enable_firewall();
+}
+
+int thb_imr_pcie_disable_firewall()
+{
+	return sip_svc_imr_pcie_disable_firewall();
+}
+#endif /* CONFIG_THUNDERBAY_MEM_PROTECT */
 
 /*
  * This function is called by board_preboot_os() (defined in thb_fpga.c),

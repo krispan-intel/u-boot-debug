@@ -98,6 +98,11 @@ static int booti_start(struct cmd_tbl *cmdtp, int flag, int argc,
 		return 1;
 	}
 #endif
+
+	if (ddr_prof_setup_boot_args()) {
+		printf("ERROR: Failed to setup ddr profiling arguments.\n");
+	}
+
 	/* Handle BOOTM_STATE_LOADOS */
 	if (relocated_addr != ld) {
 		printf("Moving Image from 0x%lx to 0x%lx, end=%lx\n", ld,

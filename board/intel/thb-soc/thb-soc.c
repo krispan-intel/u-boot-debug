@@ -30,6 +30,7 @@
 #include <version.h>
 #include "thb-imr.h"
 #include "thb_pad_cfg.h"
+#include "thb_ddr_prof.h"
 
 #define GPIO_MICRON_FLASH_PULL_UP       20
 
@@ -599,7 +600,13 @@ static int fdt_thb_boot_info(void *fdt)
 	boot_info_off =  fdt_path_offset(fdt, "/boot_info");
 	if (boot_info_off < 0) {
 		log_err("Failed to find boot_info node.\n");
-		return boot_info_off;
+		boot_info_off = fdt_add_subnode(fdt, 0, "boot_info");
+		if (boot_info_off < 0) {
+			log_err("Failed to create boot_info node.\n");
+			return ret;
+		}
+
+		boot_info_off =  fdt_path_offset(fdt, "/boot_info");
 	}
 
 	if (boot_interface == MA_BOOT_INTF_EMMC)
@@ -1675,4 +1682,14 @@ void config_dtb_blob(void)
 	}
 #endif
 	return;
+}
+
+int ddr_prof_setup_boot_args(void)
+{
+	if (ddr_prof_add_boot_args(thb_full, slice)) {
+		pr_info("%s- Failed to add ddr profiling arguments\n", __func__);
+		return 1;
+	}
+
+	return 0;
 }

@@ -432,9 +432,17 @@ static int fdt_thb_evt2_hddl_fixup(void *fdt, int hddl_dev_off)
 			log_err("unable to get node name.\n");
 			return len;
 		}
+
 		if (!strcmp(node_name, "kmb_xlink_tj@5a"))
 			bus = 4;
 
+		if (!strcmp(node_name, "tmp112@48")) {
+			ret = fdt_setprop_u32(fdt, node, "reg", 0x48);
+			if (ret) {
+				log_err("Failed to update client addr for tmp112\n");
+				return ret;
+			}
+		}
 		if (!strcmp(node_name, "adc081c@51"))
 			ret = fdt_setprop_string(fdt, node, "status", "disabled");
 

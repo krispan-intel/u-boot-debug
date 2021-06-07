@@ -1047,6 +1047,8 @@
 			clocks = <&scmi_clk SSI_1_S_CLK>;
 			interrupts = <GIC_SPI 726 IRQ_TYPE_LEVEL_HIGH>;
 			resets = <&rst_pss2 TBH_PSS_SSI_INST_1_RST_N>;
+			dmas = <&axi_dma0 2 &axi_dma0 3>;
+			dma-names = "rx", "tx";
 			#address-cells = <1>;
 			#size-cells = <0>;
 			status = "okay";
@@ -1191,7 +1193,7 @@
 			snps,data-width = <4>;
 			snps,priority = <0 0 0 0 0 0 0 0 0 0 0 0>;
 			snps,block-size = <4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096>;
-			snps,axi-max-burst-len = <32>;
+			snps,axi-max-burst-len = <4>;
 			status = "okay";
 		};
 

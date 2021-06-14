@@ -720,8 +720,6 @@
 		#reset-cells = <1>;
 	};
 
-	
-
 	soc {
 		compatible = "simple-bus";
 		#address-cells = <2>;
@@ -730,7 +728,7 @@
 		dma-ranges;
 
 		gpt_wdt: watchdog@8880a09c {
-			compatible = "intel,thunderbay-wdt";
+			compatible = "intel,keembay-wdt";
 			reg = <0x0 0x8880a09c 0x0 0xf>;
 			interrupts = <GIC_SPI 1 IRQ_TYPE_LEVEL_HIGH>,
 			             <GIC_SPI 2 IRQ_TYPE_LEVEL_HIGH>;
@@ -739,66 +737,73 @@
 			status = "okay";
 		};
 
-		gpt_cntr: counter@8880a0e8 {
-			compatible = "intel,thunderbay-counter";
-			reg = <0x0 0x8880A0E8 0x0 0x8>;
-			clocks = <&fixed_rate_emu_10mhz>;
-/*			clocks = <&scmi_clk TIMER_CLK>; */
-			status = "okay";
-		};
+		gpt_cfg: gpt@88809000 {
+			reg = <0x0 0x88809000 0x0 0xc>;
+			#address-cells = <0x2>;
+			#size-cells = <0x2>;
+			ranges;
 
-		gpt2: timer@8880a030 {
-			compatible = "intel,thunderbay-timer";
-			reg = <0x0 0x8880a030 0x0 0x10>;
-			interrupts = <GIC_SPI 16 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&fixed_rate_emu_10mhz>;
-/*			clocks = <&scmi_clk TIMER_CLK>; */
-			status = "okay";
-		};
+			gpt_cntr: counter@8880a0e8 {
+				compatible = "intel,keembay-counter";
+				reg = <0x0 0x8880a0e8 0x0 0x8>;
+				clocks = <&fixed_rate_emu_10mhz>;
+/*				clocks = <&scmi_clk TIMER_CLK>; */
+				status = "okay";
+			};
 
-		gpt3: timer@8880a040 {
-			compatible = "intel,thunderbay-timer";
-			reg = <0x0 0x8880a040 0x0 0x10>;
-			interrupts = <GIC_SPI 17 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&fixed_rate_emu_10mhz>;
-/*			clocks = <&scmi_clk TIMER_CLK>; */
-			status = "okay";
-		};
+			gpt2: timer@8880a030 {
+				compatible = "intel,keembay-timer";
+				reg = <0x0 0x8880a030 0x0 0x10>;
+				interrupts = <GIC_SPI 16 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&fixed_rate_emu_10mhz>;
+/*				clocks = <&scmi_clk TIMER_CLK>; */
+				status = "okay";
+			};
 
-		gpt4: timer@8880a050 {
-			compatible = "intel,thunderbay-timer";
-			reg = <0x0 0x8880a050 0x0 0x10>;
-			interrupts = <GIC_SPI 18 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&fixed_rate_emu_10mhz>;
-/*			clocks = <&scmi_clk TIMER_CLK>; */
-			status = "okay";
-		};
+			gpt3: timer@8880a040 {
+				compatible = "intel,keembay-timer";
+				reg = <0x0 0x8880a040 0x0 0x10>;
+				interrupts = <GIC_SPI 17 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&fixed_rate_emu_10mhz>;
+/*				clocks = <&scmi_clk TIMER_CLK>; */
+				status = "okay";
+			};
 
-		gpt5: timer@8880a060 {
-			compatible = "intel,thunderbay-timer";
-			reg = <0x0 0x8880a060 0x0 0x10>;
-			interrupts = <GIC_SPI 19 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&fixed_rate_emu_10mhz>;
-/*			clocks = <&scmi_clk TIMER_CLK>; */
-			status = "okay";
-		};
+			gpt4: timer@8880a050 {
+				compatible = "intel,keembay-timer";
+				reg = <0x0 0x8880a050 0x0 0x10>;
+				interrupts = <GIC_SPI 18 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&fixed_rate_emu_10mhz>;
+/*				clocks = <&scmi_clk TIMER_CLK>; */
+				status = "okay";
+			};
 
-		gpt6: timer@8880a070 {
-			compatible = "intel,thunderbay-timer";
-			reg = <0x0 0x8880a070 0x0 0x10>;
-			interrupts = <GIC_SPI 20 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&fixed_rate_emu_10mhz>;
-/*			clocks = <&scmi_clk TIMER_CLK>; */
-			status = "okay";
-		};
+			gpt5: timer@8880a060 {
+				compatible = "intel,keembay-timer";
+				reg = <0x0 0x8880a060 0x0 0x10>;
+				interrupts = <GIC_SPI 19 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&fixed_rate_emu_10mhz>;
+/*				clocks = <&scmi_clk TIMER_CLK>; */
+				status = "okay";
+			};
 
-		gpt7: timer@8880a080 {
-			compatible = "intel,thunderbay-timer";
-			reg = <0x0 0x8880a080 0x0 0x10>;
-			interrupts = <GIC_SPI 21 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&fixed_rate_emu_10mhz>;
-/*			clocks = <&scmi_clk TIMER_CLK>; */
-			status = "okay";
+			gpt6: timer@8880a070 {
+				compatible = "intel,keembay-timer";
+				reg = <0x0 0x8880a070 0x0 0x10>;
+				interrupts = <GIC_SPI 20 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&fixed_rate_emu_10mhz>;
+/*				clocks = <&scmi_clk TIMER_CLK>; */
+				status = "okay";
+			};
+
+			gpt7: timer@8880a080 {
+				compatible = "intel,keembay-timer";
+				reg = <0x0 0x8880a080 0x0 0x10>;
+				interrupts = <GIC_SPI 21 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&fixed_rate_emu_10mhz>;
+/*				clocks = <&scmi_clk TIMER_CLK>; */
+				status = "okay";
+			};
 		};
 
 		emmc_phy: mmc_phy@80440800 {
@@ -1047,6 +1052,8 @@
 			clocks = <&scmi_clk SSI_1_S_CLK>;
 			interrupts = <GIC_SPI 726 IRQ_TYPE_LEVEL_HIGH>;
 			resets = <&rst_pss2 TBH_PSS_SSI_INST_1_RST_N>;
+			dmas = <&axi_dma0 2 &axi_dma0 3>;
+			dma-names = "rx", "tx";
 			#address-cells = <1>;
 			#size-cells = <0>;
 			status = "okay";
@@ -1191,7 +1198,7 @@
 			snps,data-width = <4>;
 			snps,priority = <0 0 0 0 0 0 0 0 0 0 0 0>;
 			snps,block-size = <4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096 4096>;
-			snps,axi-max-burst-len = <32>;
+			snps,axi-max-burst-len = <4>;
 			status = "okay";
 		};
 

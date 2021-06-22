@@ -176,6 +176,26 @@ typedef struct {
 	const uint32_t vddr3_calib_offset;
 } dts_calib_off_t;
 
+struct plat_tpm_measurements {
+        u8 bl2_pcr0_value[SHA512_SIZE];
+        u8 bl2_scp_pcr0_value[SHA512_SIZE];
+        u8 bl31_pcr0_value[SHA512_SIZE];
+        u8 bl32_pcr0_value[SHA512_SIZE];
+        u8 bl32ex1_pcr0_value[SHA512_SIZE];
+        u8 bl32ex2_pcr0_value[SHA512_SIZE];
+        u8 pdata_pcr1_value[SHA512_SIZE];
+        u8 tb_fw_cfg_pcr1_value[SHA512_SIZE];
+        u8 soc_fw_cfg_pcr1_value[SHA512_SIZE];
+        u8 tos_fw_cfg_pcr1_value[SHA512_SIZE];
+        u8 nt_fw_cfg_pcr1_value[SHA512_SIZE];
+        u8 boot_certs_pcr1_value[SHA512_SIZE];
+        u8 bl33_pcr4_value[SHA512_SIZE];
+        u8 secure_boot_pcr7_value[SHA512_SIZE];
+        u8 alg_switch_pcr7_value[SHA512_SIZE];
+        u8 nvc_all_pcr7_value[SHA512_SIZE];
+        u8 trace_pcr7_value[SHA512_SIZE];
+};
+
 typedef struct {
 	/*
 	 * Size of this struct. Set on BL2 entry.
@@ -186,8 +206,7 @@ typedef struct {
 	const platform_event_t err_to_rt;
 	const uint32_t bl2_soc_rst_stat; /* SoC Reset before it was cleared by BL2. */
 	const ocs_hash_alg_t tpm_hash_alg_type;
-	const uint8_t tpm_secure_world_digest[SHA384_SIZE]; /* Hash of BL2 + BL31 + BL32. */
-	const uint8_t tpm_normal_world_digest[SHA384_SIZE]; /* Hash of BL33. Size of max supported Hash */
+	const struct plat_tpm_measurements tpm_measurements; /* Boot measurements captured for Measured Boot */
 	const uint8_t tpm_secure_world_bl2_digest[SHA384_SIZE]; /* Hash of BL2 calculated by BL1 */
 	const uint32_t enc_fwu_key[AES_256_KEY_U32_SIZE]; /* FWU key pdat item. */
         const uint32_t enc_fwu_key_iv[AES_IV_U32_SIZE]; /* FWU key IV pdat item. */

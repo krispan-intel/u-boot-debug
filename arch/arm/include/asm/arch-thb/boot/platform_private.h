@@ -177,23 +177,23 @@ typedef struct {
 } dts_calib_off_t;
 
 struct plat_tpm_measurements {
-        u8 bl2_pcr0_value[SHA512_SIZE];
-        u8 bl2_scp_pcr0_value[SHA512_SIZE];
-        u8 bl31_pcr0_value[SHA512_SIZE];
-        u8 bl32_pcr0_value[SHA512_SIZE];
-        u8 bl32ex1_pcr0_value[SHA512_SIZE];
-        u8 bl32ex2_pcr0_value[SHA512_SIZE];
-        u8 pdata_pcr1_value[SHA512_SIZE];
-        u8 tb_fw_cfg_pcr1_value[SHA512_SIZE];
-        u8 soc_fw_cfg_pcr1_value[SHA512_SIZE];
-        u8 tos_fw_cfg_pcr1_value[SHA512_SIZE];
-        u8 nt_fw_cfg_pcr1_value[SHA512_SIZE];
-        u8 boot_certs_pcr1_value[SHA512_SIZE];
-        u8 bl33_pcr4_value[SHA512_SIZE];
-        u8 secure_boot_pcr7_value[SHA512_SIZE];
-        u8 alg_switch_pcr7_value[SHA512_SIZE];
-        u8 nvc_all_pcr7_value[SHA512_SIZE];
-        u8 trace_pcr7_value[SHA512_SIZE];
+	u8 bl2_pcr0_value[SHA512_SIZE];
+	u8 bl2_scp_pcr0_value[SHA512_SIZE];
+	u8 bl31_pcr0_value[SHA512_SIZE];
+	u8 bl32_pcr0_value[SHA512_SIZE];
+	u8 bl32ex1_pcr0_value[SHA512_SIZE];
+	u8 bl32ex2_pcr0_value[SHA512_SIZE];
+	u8 pdata_pcr1_value[SHA512_SIZE];
+	u8 tb_fw_cfg_pcr1_value[SHA512_SIZE];
+	u8 soc_fw_cfg_pcr1_value[SHA512_SIZE];
+	u8 tos_fw_cfg_pcr1_value[SHA512_SIZE];
+	u8 nt_fw_cfg_pcr1_value[SHA512_SIZE];
+	u8 boot_certs_pcr1_value[SHA512_SIZE];
+	u8 bl33_pcr4_value[SHA512_SIZE];
+	u8 secure_boot_pcr7_value[SHA512_SIZE];
+	u8 alg_switch_pcr7_value[SHA512_SIZE];
+	u8 nvc_all_pcr7_value[SHA512_SIZE];
+	u8 trace_pcr7_value[SHA512_SIZE];
 };
 
 typedef struct {

@@ -1036,7 +1036,7 @@
 		};
 
 		spi0: spi@80520000 {
-			compatible = "snps,dw-ahb-ssi";
+			compatible = "intel,thunderbay-ssi";
 			reg = <0x0 0x80520000 0x0 0x100>;
 			interrupts = <GIC_SPI 727 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk SSI_0_S_CLK>;
@@ -1047,7 +1047,7 @@
 		};
 
 		spi1: spi@80530000 {
-			compatible = "snps,dw-ahb-ssi";
+			compatible = "intel,thunderbay-ssi";
 			reg = <0x0 0x80530000 0x0 0x100>;
 			clocks = <&scmi_clk SSI_1_S_CLK>;
 			interrupts = <GIC_SPI 726 IRQ_TYPE_LEVEL_HIGH>;

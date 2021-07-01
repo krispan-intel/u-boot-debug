@@ -31,14 +31,39 @@
 #include "thb-imr.h"
 #include "thb_pad_cfg.h"
 #include "thb_ddr_prof.h"
+#include <tpm-eventlog.h>
 
 #define GPIO_MICRON_FLASH_PULL_UP       20
 
-#define THB_TPM_BL2_FROM_BL1_PCR_INDEX         0
-#define THB_TPM_BL2_PCR_INDEX                   1
-#define THB_TPM_FDT_PCR_INDEX                   2
-#define THB_TPM_BL33_PCR_INDEX                  4
-#define THB_TPM_KERNEL_PCR_INDEX                8
+/*
+ * PCR USAGE
+ * Index                 PCR Usage
+ *   0     SRTM, BIOS, Host Platform Extensions, Embedded
+ *         Option ROMs and PI Drivers
+ *   1     Host Platform Configuration
+ *   2     UEFI driver and application Code
+ *   3     UEFI driver and application Configuration and Data
+ *   4     UEFI Boot Manager Code (usually the MBR) and Boot Attempts
+ *   5     Boot Manager Code Configuration and Data (for use by the
+ *         Boot Manager Code) and GPT/Partition Table
+ *   6     Host Platform Manufacturer Specific
+ *   7     Secure Boot Policy
+ *  8-15   Defined for use by the Static OS
+ *   16    DebugSpecification TCG PC Client Platform Firmware Profile
+ *   23    Application Support
+ */
+
+#define TPM_ROM_PCR_INDEX                       0
+#define TPM_HPC_PCR_INDEX                       1
+#define TPM_MBR_PCR_INDEX                       4
+#define TPM_GPT_PCR_INDEX                       5
+#define TPM_SECURE_BOOT_POLICY_PCR_INDEX        7
+#define TPM_KERNEL_PCR_INDEX                    8
+
+#define TPM_BL2_EVT_TYPE                EV_POST_CODE
+#define TPM_FDT_EVT_TYPE                EV_TABLE_OF_DEVICES
+#define TPM_BL33_EVT_TYPE               EV_COMPACT_HASH
+#define TPM_KERNEL_EVT_TYPE             EV_COMPACT_HASH
 
 #define SZ_8G                           0x200000000
 #define BUFF_LEN			6
@@ -860,7 +885,7 @@ static int measure_boot_kernel_fdt(ocs_hash_alg_t hash_alg)
 	 */
 	u8 kernel_hash[SHA384_SIZE];
 	u8 fdt_hash[SHA384_SIZE];
-	int rc;
+	int rc = 0;
 
 	debug("%s: image load at %lx, size: %lx\n", __func__,
 	      os->load, os->image_len);
@@ -889,35 +914,68 @@ static int measure_boot_kernel_fdt(ocs_hash_alg_t hash_alg)
 
 	if (hash_alg == OCS_HASH_SHA256) {
 		printf("Measured boot SHA256: Writing to THB_TPM_KERNEL_PCR_INDEX ...\n");
-		rc = tpm2_pcr_extend(dev, THB_TPM_KERNEL_PCR_INDEX, TPM2_ALG_SHA256, kernel_hash, TPM2_DIGEST_LEN);
+		rc = tpm_extend_pcr_and_log_event(dev, TPM_KERNEL_PCR_INDEX,
+						  TPM2_ALG_SHA256, kernel_hash,
+						  TPM_KERNEL_EVT_TYPE,
+						  sizeof("THB_SOC_KERNEL"),
+						  "THB_SOC_KERNEL");
+		if (rc) {
+			printf("tpm_extend_pcr_and_log_event failed ret %d\n", rc);
+			return -EINVAL;
+		}
 	}
 	if (hash_alg == OCS_HASH_SHA384) {
 		printf("Measured boot SHA384: Writing to THB_TPM_KERNEL_PCR_INDEX ...\n");
-		rc = tpm2_pcr_extend_sha384(dev, THB_TPM_KERNEL_PCR_INDEX, kernel_hash);
+		rc = tpm_extend_pcr_and_log_event(dev, TPM_KERNEL_PCR_INDEX,
+						  TPM2_ALG_SHA384, kernel_hash,
+						  TPM_KERNEL_EVT_TYPE,
+						  sizeof("THB_SOC_KERNEL"),
+						  "THB_SOC_KERNEL");
+		if (rc) {
+			printf("tpm_extend_pcr_and_log_event failed ret %d\n", rc);
+			return -EINVAL;
+		}
 	}
 	if (rc) {
 		printf("%s: tpm2_pcr_extend failed ret %d\n", __func__, rc);
 		return -EINVAL;
 	}
-
 	printf("Measured boot : Writing to THB_TPM_KERNEL_PCR_INDEX ...SUCCESS\n");
+
 	thb_hash_algo->hash_func_ws((void *)images.ft_addr, images.ft_len,
 				    fdt_hash, thb_hash_algo->chunk_size);
 
 	if (hash_alg == OCS_HASH_SHA256) {
 		printf("Measured boot SHA256: Writing to THB_TPM_FDT_PCR_INDEX...\n");
-		rc = tpm2_pcr_extend(dev, THB_TPM_FDT_PCR_INDEX, TPM2_ALG_SHA256, fdt_hash, TPM2_DIGEST_LEN);
+		rc = tpm_extend_pcr_and_log_event(dev, TPM_HPC_PCR_INDEX,
+						  TPM2_ALG_SHA256, fdt_hash,
+						  TPM_FDT_EVT_TYPE,
+						  sizeof("THB_SOC_FDT"),
+						  "THB_SOC_FDT");
+		if (rc) {
+			printf("tpm_extend_pcr_and_log_event failed ret %d\n", rc);
+			return -EINVAL;
+		}
 	}
 	if (hash_alg == OCS_HASH_SHA384) {
 		printf("Measured boot SHA384: Writing to THB_TPM_FDT_PCR_INDEX...\n");
-		rc = tpm2_pcr_extend_sha384(dev, THB_TPM_FDT_PCR_INDEX, fdt_hash);
+		rc = tpm_extend_pcr_and_log_event(dev, TPM_HPC_PCR_INDEX,
+						  TPM2_ALG_SHA384, fdt_hash,
+						  TPM_FDT_EVT_TYPE,
+						  sizeof("THB_SOC_FDT"),
+						  "THB_SOC_FDT");
+		if (rc) {
+			printf("tpm_extend_pcr_and_log_event failed ret %d\n", rc);
+			return -EINVAL;
+		}
 	}
 	if (rc) {
 		printf("%s: tpm2_pcr_extend failed ret %d\n", __func__, rc);
 		return -EINVAL;
 	}
 	printf("Measured boot : Writing to THB_TPM_FDT_PCR_INDEX...SUCCESS\n");
-	return 0;
+
+	return rc;
 }
 
 /**
@@ -973,6 +1031,7 @@ static int measure_boot_bl2(ocs_hash_alg_t *hash_alg)
 {
 	platform_bl_ctx_t *bl_ctx = NULL;
 	int rc = 0;
+	u32 tpm_hash_alg;
 	struct udevice *dev;
 
 	rc = get_tpm(&dev);
@@ -1001,104 +1060,180 @@ static int measure_boot_bl2(ocs_hash_alg_t *hash_alg)
 		return -EINVAL;
 	}
 
-	switch (bl_ctx->tpm_hash_alg_type) {
-	case OCS_HASH_SHA256:
-		debug("%s: hash alg %d tpm_secure_world_digest: %p\n",
-		      __func__,
-		      bl_ctx->tpm_hash_alg_type,
-		      bl_ctx->tpm_secure_world_digest);
+	struct plat_tpm_measurements *tpm_measure = (struct
+							plat_tpm_measurements *)
+							&bl_ctx->tpm_measurements;
+	if (!tpm_measure) {
+		printf("Failed to retrieve the boot measurements.\n");
+		return -EPERM;
+	}
 
-		printf("Measured boot SHA256: Writing to THB_TPM_BL2_FROM_BL1_PCR_INDEX...\n");
-		rc = tpm2_pcr_extend(dev, THB_TPM_BL2_FROM_BL1_PCR_INDEX, TPM2_ALG_SHA256,
-				     bl_ctx->tpm_secure_world_bl2_digest, TPM2_DIGEST_LEN);
-		if (rc) {
-			printf("%s: tpm2_pcr_extend failed ret %d\n",
-			       __func__, rc);
-			return -EINVAL;
-		}
-
-		printf("Measured boot : Writing to THB_TPM_BL2_FROM_BL1_PCR_INDEX...SUCCESS\n");
-		printf("Measured boot SHA256: Writing to THB_TPM_BL2_PCR_INDEX...\n");
-
-		rc = tpm2_pcr_extend(dev, THB_TPM_BL2_PCR_INDEX, TPM2_ALG_SHA256,
-				     bl_ctx->tpm_secure_world_digest, TPM2_DIGEST_LEN);
-		if (rc) {
-			printf("%s: tpm2_pcr_extend failed ret %d\n",
-			       __func__, rc);
-			return -EINVAL;
-		}
-		printf("Measured boot : Writing to THB_TPM_BL2_PCR_INDEX... SUCCESS\n");
-		debug("%s: tpm_normal_world_digest: %p\n", __func__,
-		      bl_ctx->tpm_normal_world_digest);
-
-		printf("Measured boot SHA256: Writing to THB_TPM_BL33_PCR_INDEX...\n");
-		rc = tpm2_pcr_extend(dev, THB_TPM_BL33_PCR_INDEX, TPM2_ALG_SHA256,
-				     bl_ctx->tpm_normal_world_digest, TPM2_DIGEST_LEN);
-		if (rc) {
-			printf("%s: tpm2_pcr_extend failed ret %d\n",
-			       __func__, rc);
-			return -EINVAL;
-		}
-		printf("Measured boot : Writing to THB_TPM_BL33_PCR_INDEX...SUCCESS\n");
-		*hash_alg = bl_ctx->tpm_hash_alg_type;
-		return 0;
-	/* Only SHA256 is supported in tpm2_pcr_extend.
-	 * SHA384 is not supported in dTPM Infineon chipset.
-	 * HSD : https://hsdes.intel.com/appstore/article/#/1508191880
-	 */
-	case OCS_HASH_SHA384:
-		/* platform_bl_ctx stores up hash size to SHA384_SIZE,
-		 * SHA512 is not supported
-		 */
-		debug("%s: hash alg %d tpm_secure_world_digest: %p , tpm_secure_world_bl2_digest %p\n",
-		      __func__,
-		      bl_ctx->tpm_hash_alg_type,
-		      bl_ctx->tpm_secure_world_digest,
-		      bl_ctx->tpm_secure_world_bl2_digest);
-
-		printf("Measured boot SHA384: Writing to THB_TPM_BL2_FROM_BL1_PCR_INDEX...\n");
-		rc = tpm2_pcr_extend_sha384(dev, THB_TPM_BL2_FROM_BL1_PCR_INDEX,
-					    bl_ctx->tpm_secure_world_bl2_digest);
-		if (rc) {
-			printf("%s: tpm2_pcr_extend failed ret %d\n",
-			       __func__, rc);
-			return -EINVAL;
-		}
-
-		printf("Measured boot : Writing to THB_TPM_BL2_FROM_BL1_PCR_INDEX...SUCCESS\n");
-		printf("Measured boot SHA384: Writing to THB_TPM_BL2_PCR_INDEX...\n");
-		rc = tpm2_pcr_extend_sha384(dev, THB_TPM_BL2_PCR_INDEX,
-					    bl_ctx->tpm_secure_world_digest);
-		if (rc) {
-			printf("%s: tpm2_pcr_extend failed ret %d\n",
-			       __func__, rc);
-			return -EINVAL;
-		}
-
-		printf("Measured boot : Writing to THB_TPM_BL2_PCR_INDEX... SUCCESS\n");
-		debug("%s: tpm_normal_world_digest: %p\n", __func__,
-		      bl_ctx->tpm_normal_world_digest);
-
-		printf("Measured boot SHA384: Writing to THB_TPM_BL33_PCR_INDEX...\n");
-		rc = tpm2_pcr_extend_sha384(dev, THB_TPM_BL33_PCR_INDEX,
-					    bl_ctx->tpm_normal_world_digest);
-		if (rc) {
-			printf("%s: tpm2_pcr_extend failed ret %d\n",
-			       __func__, rc);
-			return -EINVAL;
-		}
-
-		printf("Measured boot : Writing to THB_TPM_BL33_PCR_INDEX...SUCCESS\n");
-		*hash_alg = bl_ctx->tpm_hash_alg_type;
-		return 0;
-
-	case OCS_HASH_SHA512:
-	default:
-		printf("%s: Invalid algorithm type\n", __func__);
+	if (bl_ctx->tpm_hash_alg_type == OCS_HASH_SHA256) {
+		debug("%s: SHA256 selected for measure boot hash alg\n", __func__);
+		tpm_hash_alg = TPM2_ALG_SHA256;
+	} else if (bl_ctx->tpm_hash_alg_type == OCS_HASH_SHA384) {
+		debug("%s: SHA384 selected for measure boot hash alg\n", __func__);
+		tpm_hash_alg = TPM2_ALG_SHA384;
+	} else {
+		printf("Invalid Hash algorithm \n");
 		return -EINVAL;
 	}
 
-	return -EINVAL;
+	rc = tpm_extend_pcr_and_log_event(dev, TPM_ROM_PCR_INDEX, tpm_hash_alg,
+					  tpm_measure->bl2_pcr0_value,
+					  TPM_BL2_EVT_TYPE,
+					  POST_CODE_STR_LEN,
+					  EV_POSTCODE_INFO_POST_CODE);
+	if (rc) {
+		printf("tpm_extend_pcr_and_log_event for bl2_pcr0_value failed ret %d\n", rc);
+		return -EINVAL;
+	}
+	rc = tpm_extend_pcr_and_log_event(dev, TPM_ROM_PCR_INDEX, tpm_hash_alg,
+					  tpm_measure->bl2_scp_pcr0_value,
+					  TPM_BL2_EVT_TYPE,
+					  POST_CODE_STR_LEN,
+					  EV_POSTCODE_INFO_POST_CODE);
+	if (rc) {
+		printf("tpm_extend_pcr_and_log_event for bl2_scp_pcr0_value failed ret %d\n", rc);
+		return -EINVAL;
+	}
+	rc = tpm_extend_pcr_and_log_event(dev, TPM_ROM_PCR_INDEX, tpm_hash_alg,
+					  tpm_measure->bl31_pcr0_value,
+					  TPM_BL2_EVT_TYPE,
+					  POST_CODE_STR_LEN,
+					  EV_POSTCODE_INFO_POST_CODE);
+	if (rc) {
+		printf("tpm_extend_pcr_and_log_event for bl31_pcr0_value failed ret %d\n", rc);
+		return -EINVAL;
+	}
+	rc = tpm_extend_pcr_and_log_event(dev, TPM_ROM_PCR_INDEX, tpm_hash_alg,
+					  tpm_measure->bl32_pcr0_value,
+					  TPM_BL2_EVT_TYPE,
+					  POST_CODE_STR_LEN,
+					  EV_POSTCODE_INFO_POST_CODE);
+	if (rc) {
+		printf("tpm_extend_pcr_and_log_event for bl32_pcr0_value failed ret %d\n", rc);
+		return -EINVAL;
+	}
+	rc = tpm_extend_pcr_and_log_event(dev, TPM_ROM_PCR_INDEX, tpm_hash_alg,
+					  tpm_measure->bl32ex1_pcr0_value,
+					  TPM_BL2_EVT_TYPE,
+					  POST_CODE_STR_LEN,
+					  EV_POSTCODE_INFO_POST_CODE);
+	if (rc) {
+		printf("tpm_extend_pcr_and_log_event for bl32ex1_pcr0_value failed ret %d\n", rc);
+		return -EINVAL;
+	}
+	rc = tpm_extend_pcr_and_log_event(dev, TPM_ROM_PCR_INDEX, tpm_hash_alg,
+					  tpm_measure->bl32ex2_pcr0_value,
+					  TPM_BL2_EVT_TYPE,
+					  POST_CODE_STR_LEN,
+					  EV_POSTCODE_INFO_POST_CODE);
+	if (rc) {
+		printf("tpm_extend_pcr_and_log_event for bl32ex2_pcr0_value failed ret %d\n", rc);
+		return -EINVAL;
+	}
+	rc = tpm_extend_pcr_and_log_event(dev, TPM_HPC_PCR_INDEX, tpm_hash_alg,
+					  tpm_measure->pdata_pcr1_value,
+					  EV_TABLE_OF_DEVICES,
+					  sizeof("THB_SOC_PDATA"),
+					  "THB_SOC_PDATA");
+	if (rc) {
+		printf("tpm_extend_pcr_and_log_event for pdata_pcr1_value failed ret %d\n", rc);
+		return -EINVAL;
+	}
+	rc = tpm_extend_pcr_and_log_event(dev, TPM_HPC_PCR_INDEX, tpm_hash_alg,
+					  tpm_measure->tb_fw_cfg_pcr1_value,
+					  EV_TABLE_OF_DEVICES,
+					  sizeof("THB_SOC_TB_FW_CFG"),
+					  "THB_SOC_TB_FW_CFG");
+	if (rc) {
+		printf("tpm_extend_pcr_and_log_event for tb_fw_cfg_pcr1_value failed ret %d\n", rc);
+		return -EINVAL;
+	}
+	rc = tpm_extend_pcr_and_log_event(dev, TPM_HPC_PCR_INDEX, tpm_hash_alg,
+					  tpm_measure->soc_fw_cfg_pcr1_value,
+					  EV_TABLE_OF_DEVICES,
+					  sizeof("THB_SOC_SOC_FW_CFG"),
+					  "THB_SOC_SOC_FW_CFG");
+	if (rc) {
+		printf("tpm_extend_pcr_and_log_event for soc_fw_cfg_pcr1_value failed ret %d\n", rc);
+		return -EINVAL;
+	}
+	rc = tpm_extend_pcr_and_log_event(dev, TPM_HPC_PCR_INDEX, tpm_hash_alg,
+					  tpm_measure->tos_fw_cfg_pcr1_value,
+					  EV_TABLE_OF_DEVICES,
+					  sizeof("THB_SOC_TOS_FW_CFG"),
+					  "THB_SOC_TOS_FW_CFG");
+	if (rc) {
+		printf("tpm_extend_pcr_and_log_event for tos_fw_cfg_pcr1_value failed ret %d\n", rc);
+		return -EINVAL;
+	}
+	rc = tpm_extend_pcr_and_log_event(dev, TPM_HPC_PCR_INDEX, tpm_hash_alg,
+					  tpm_measure->nt_fw_cfg_pcr1_value,
+					  EV_TABLE_OF_DEVICES,
+					  sizeof("THB_SOC_NT_FW_CFG"),
+					  "THB_SOC_NT_FW_CFG");
+	if (rc) {
+		printf("tpm_extend_pcr_and_log_event for nt_fw_cfg_pcr1_value failed ret %d\n", rc);
+		return -EINVAL;
+	}
+	rc = tpm_extend_pcr_and_log_event(dev, TPM_HPC_PCR_INDEX, tpm_hash_alg,
+					  tpm_measure->boot_certs_pcr1_value,
+					  EV_TABLE_OF_DEVICES,
+					  sizeof("THB_SOC_BOOT_CERTS"),
+					  "THB_SOC_BOOT_CERTS");
+	if (rc) {
+		printf("tpm_extend_pcr_and_log_event for boot_certs_pcr1_value failed ret %d\n", rc);
+		return -EINVAL;
+	}
+	rc = tpm_extend_pcr_and_log_event(dev, TPM_MBR_PCR_INDEX, tpm_hash_alg,
+					  tpm_measure->bl33_pcr4_value,
+					  TPM_BL33_EVT_TYPE,
+					  sizeof("THB_SOC_BL33"),
+					  "THB_SOC_BL33");
+	if (rc) {
+		printf("tpm_extend_pcr_and_log_event for bl33_pcr4_value failed ret %d\n", rc);
+		return -EINVAL;
+	}
+	rc = tpm_extend_pcr_and_log_event(dev, TPM_SECURE_BOOT_POLICY_PCR_INDEX, tpm_hash_alg,
+					  tpm_measure->secure_boot_pcr7_value,
+					  EV_ACTION,
+					  sizeof("THB_SOC_SECURE_BOOT_BIT"),
+					  "THB_SOC_SECURE_BOOT_BIT");
+	if (rc) {
+		printf("tpm_extend_pcr_and_log_event for secure_boot_pcr7_value failed ret %d\n", rc);
+		return -EINVAL;
+	}
+	rc = tpm_extend_pcr_and_log_event(dev, TPM_SECURE_BOOT_POLICY_PCR_INDEX, tpm_hash_alg,
+					  tpm_measure->alg_switch_pcr7_value,
+					  EV_ACTION,
+					  sizeof("THB_SOC_ALG_SWITCH_BIT"),
+					  "THB_SOC_ALG_SWITCH_BIT");
+	if (rc) {
+		printf("tpm_extend_pcr_and_log_event for alg_switch_pcr7_value failed ret %d\n", rc);
+		return -EINVAL;
+	}
+	rc = tpm_extend_pcr_and_log_event(dev, TPM_SECURE_BOOT_POLICY_PCR_INDEX, tpm_hash_alg,
+					  tpm_measure->nvc_all_pcr7_value,
+					  EV_ACTION,
+					  sizeof("THB_SOC_NVC_ALL_BIT"),
+					  "THB_SOC_NVC_ALL_BIT");
+	if (rc) {
+		printf("tpm_extend_pcr_and_log_event for nvc_all_pcr7_value failed ret %d\n", rc);
+		return -EINVAL;
+	}
+	rc = tpm_extend_pcr_and_log_event(dev, TPM_SECURE_BOOT_POLICY_PCR_INDEX, tpm_hash_alg,
+					  tpm_measure->trace_pcr7_value,
+					  EV_ACTION,
+					  sizeof("THB_SOC_TRACE_BIT"),
+					  "THB_SOC_TRACE_BIT");
+	if (rc) {
+		printf("tpm_extend_pcr_and_log_event for trace_pcr7_value failed ret %d\n", rc);
+		return -EINVAL;
+	}
+
+	return rc;
 }
 
 /**

@@ -1012,7 +1012,7 @@
 			#size-cells = <0>;
 			status = "disabled";
 		};
-
+/*
 		smbus: smbus@80480000 {
 			compatible = "snps,designware-i2c";
 			reg = <0x0 0x80480000 0x0 0x100>;
@@ -1034,7 +1034,7 @@
 				status = "okay";
 			};
 		};
-
+*/
 		spi0: spi@80520000 {
 			compatible = "intel,thunderbay-ssi", "snps,dw-ahb-ssi";
 			reg = <0x0 0x80520000 0x0 0x100>;
@@ -1232,8 +1232,8 @@
 				status = "okay";
 				compatible = "intel_tsens";
 				reg = <0x4000005a>;
-				local-host = <0x3>;
-				remote-host = <0x3>;
+				local-host = <0x2>;
+				remote-host = <0x2>;
 				bus = <0x1>;
 			};
 			tmp112@48 {

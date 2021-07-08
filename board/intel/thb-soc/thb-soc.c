@@ -31,7 +31,7 @@
 #include "thb-imr.h"
 #include "thb_pad_cfg.h"
 #include "thb_ddr_prof.h"
-#include <tpm-eventlog.h>
+#include "tpm-eventlog.h"
 
 #define GPIO_MICRON_FLASH_PULL_UP       20
 

@@ -36,7 +36,7 @@
 /* DDR base address. */
 #define DDR_BASE (0x1000000000)
 /* Secure DDR usage. */
-#define SECURE_DDR_SIZE (SZ_128M)
+#define SECURE_DDR_SIZE (SZ_256M)
 /* DDR shared between secure and non-secure world. */
 #define SHARED_DDR_SIZE (SZ_32M)
 #define SHARED_DDR_BASE (DDR_BASE + SECURE_DDR_SIZE)
@@ -54,6 +54,7 @@
  */
 #define CONFIG_SYS_INIT_SP_ADDR                                                \
 	(CONFIG_SYS_SDRAM_BASE + SZ_4M + INIT_STACK_SIZE)
+
 /* Default load address. */
 #define CONFIG_SYS_LOAD_ADDR 0xB4C80000
 /* Mallocable size. */
@@ -240,15 +241,15 @@
 	"env_mmc_blknum_redund=0xfc0\0"                                        \
 	"env_mmc_nblks=0x40\0"                                                 \
 	"bootargs=console=ttyS0,115200\0"    			                \
-	"flashless_addr=0x1100000000\0"						\
-	"ramfs_addr=0x101C200000\0"						\
-	"fdt_high=0x101A1FFFFF\0"                                                \
-	"initrd_addr=0x101A200000\0"                                             \
-	"kernel_addr=0x100A000000\0"                                             \
-        "kernel_addr_r=0x100A000000\0"                                           \
+	"flashless_addr=0x1240000000\0"						\
+	"ramfs_addr=0x1100000000\0"						\
+	"fdt_high=0x10121FFFFF\0"                                                \
+	"initrd_addr=0x1012200000\0"                                             \
+	"kernel_addr=0x10D7880000\0"                                             \
+        "kernel_addr_r=0x10D7880000\0"                                           \
 	"scriptaddr=0x100C000000\0"                                              \
-	"fit_addr=0x105C200000\0"                                                \
-	"dtb_addr=0x101A000000\0"						\
+	"fit_addr=0x10A0000000\0"                                                \
+	"dtb_addr=0x1012000000\0"						\
 	"load_ramdisk=mmc read ${initrd_addr} 0x8000 0x1000\0"                 \
 	"load_kernel=mmc read ${kernel_addr} 0x0 0x6000\0"                     \
 	"boot_linux=booti ${kernel_addr} ${initrd_addr} ${fdt_addr}\0"         \

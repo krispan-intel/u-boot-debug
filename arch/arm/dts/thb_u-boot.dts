@@ -47,12 +47,12 @@
 		};
 	};
 
-	sysmem@1008000000 {
+	sysmem@1010000000 {
 		compatible = "mmio-sram";
 		#address-cells = <2>;
 		#size-cells = <2>;
-		reg = <0x10 0x08000000 0x0 0x2000000>;
-		ranges = <0 0x0 0x10 0x08000000 0x0 0x2000000>;
+		reg = <0x10 0x10000000 0x0 0x2000000>;
+		ranges = <0 0x0 0x10 0x10000000 0x0 0x2000000>;
 
 		/*
 		* Allocate 1MB at fixed location for shared memory between

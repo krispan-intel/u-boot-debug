@@ -267,12 +267,12 @@ int tpm_extend_pcr_and_log_event(struct udevice *dev, int pcr_index,
 
 	if (!hash)
 		return -EINVAL;
-
+/*
 	if (memcmp(hash, zero, SHA256_SUM_LEN) == 0) {
 		log_warning("Hash is zero, wouldn't extend to PCR\n");
 		return 0;
 	}
-
+*/
 	rc = tpm2_pcr_extend(dev, pcr_index, hash_alg, hash, SHA256_SUM_LEN);
 	if (rc) {
 		log_err("tpm2_pcr_extend failed ret %d\n", rc);

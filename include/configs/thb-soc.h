@@ -42,8 +42,8 @@
 #define RAMFS_ADDR     "0x1100000000"
 #define FDT_HIGH       "0x10121FFFFF"
 #define INITRD_ADDR    "0x1012200000"
-#define KERNEL_ADDR    "0x10D7880000"
-#define KERNEL_ADDR_R  "0x10D7880000"
+#define KERNEL_ADDR    "0x1014280000"
+#define KERNEL_ADDR_R  "0x1014280000"
 #define FIT_ADDR       "0x10A0000000"
 #define DTB_ADDR       "0x1012000000"
 #else

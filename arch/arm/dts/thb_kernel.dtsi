@@ -2813,11 +2813,7 @@
 				intel,keembay-vpu-ipc-id = <0x0>;
 				intel,keembay-vpu-phys-slice-id = <0x0>;
 			};
-			vpu_reset0 {
-				compatible = "intel,vpu-reset";
-				resets = <&rst_comss0 0x1>;
-				intel,reset-slice-id = <0x0>;
-			};
+
 		};
 
             media_slice0: media_slice0@185538000 {
@@ -3225,11 +3221,6 @@
                                 intel,keembay-vpu-phys-slice-id = <0x1>;
 
 			};
-			vpu_reset1 {
-				compatible = "intel,vpu-reset";
-				resets = <&rst_comss1 0x1>;
-				intel,reset-slice-id = <0x1>;
-			};
 		};
 
                 media_slice1: media_slice1@285538000 {
@@ -3617,11 +3608,6 @@
                                 intel,keembay-vpu-phys-slice-id = <0x2>;
 
 			};
-			vpu_reset2 {
-				compatible = "intel,vpu-reset";
-				resets = <&rst_comss2 0x1>;
-				intel,reset-slice-id = <0x2>;
-			};
 		};
 
 		media_slice2: media_slice2@385538000 {
@@ -4008,11 +3994,6 @@
                                 intel,keembay-vpu-ipc-id = <0x1>;
 #endif
                                 intel,keembay-vpu-phys-slice-id = <0x3>;
-			};
-			vpu_reset3 {
-				compatible = "intel,vpu-reset";
-				resets = <&rst_comss3 0x1>;
-				intel,reset-slice-id = <0x3>;
 			};
 		};
 

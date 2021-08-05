@@ -1236,7 +1236,6 @@
 				remote-host = <0x2>;
 				bus = <0x1>;
 			};
-#if (THB_SLICE_0_EN) && (THB_SLICE_1_EN) && (THB_SLICE_2_EN) && (THB_SLICE_3_EN)
 			tmp112@48 {
 				status = "okay";
 				compatible = "tmp112";
@@ -1248,7 +1247,6 @@
 				remote-host = <0x4>;
 				bus = <0x0>;
 			};
-#endif
 			adc081c@51 {
 				status = "okay";
                                 compatible = "adc081c";
@@ -1256,7 +1254,6 @@
                                 remote-host = <0x4>;
 				bus = <0x0>;
                         };
-#if (THB_SLICE_0_EN) && (THB_SLICE_1_EN) && (THB_SLICE_2_EN) && (THB_SLICE_3_EN)
 			ads7142@18 {
 				status = "disabled";
 				compatible = "ads7142";
@@ -1272,7 +1269,7 @@
 				remote-host = <0x4>;
 				bus = <0x0>;
 			};
-#endif
+
 		 };
 		hddl_reset: reset_info {
 			board0 {

@@ -36,28 +36,7 @@
 /* DDR base address. */
 #define DDR_BASE (0x1000000000)
 /* Secure DDR usage. */
-#if CONFIG_THUNDERBAY_EVT2_ENABLE
 #define SECURE_DDR_SIZE (SZ_256M)
-#define FLASHLESS_ADDR "0x1240000000"
-#define RAMFS_ADDR     "0x1100000000"
-#define FDT_HIGH       "0x10121FFFFF"
-#define INITRD_ADDR    "0x1012200000"
-#define KERNEL_ADDR    "0x10D7880000"
-#define KERNEL_ADDR_R  "0x10D7880000"
-#define FIT_ADDR       "0x10A0000000"
-#define DTB_ADDR       "0x1012000000"
-#else
-#define SECURE_DDR_SIZE (SZ_128M)
-#define FLASHLESS_ADDR "0x1100000000"
-#define RAMFS_ADDR     "0x101C200000"
-#define FDT_HIGH       "0x101A1FFFFF"
-#define INITRD_ADDR    "0x101A200000"
-#define KERNEL_ADDR    "0x100A000000"
-#define KERNEL_ADDR_R  "0x100A000000"
-#define FIT_ADDR       "0x105C200000"
-#define DTB_ADDR       "0x101A000000"
-#endif
-
 /* DDR shared between secure and non-secure world. */
 #define SHARED_DDR_SIZE (SZ_32M)
 #define SHARED_DDR_BASE (DDR_BASE + SECURE_DDR_SIZE)
@@ -262,15 +241,15 @@
 	"env_mmc_blknum_redund=0xfc0\0"                                        \
 	"env_mmc_nblks=0x40\0"                                                 \
 	"bootargs=console=ttyS0,115200\0"    			                \
-	"flashless_addr=" FLASHLESS_ADDR "\0"					\
-	"ramfs_addr=" RAMFS_ADDR "\0"						\
-	"fdt_high=" FDT_HIGH "\0"						\
-	"initrd_addr=" INITRD_ADDR "\0"						\
-	"kernel_addr=" KERNEL_ADDR "\0"						\
-	"kernel_addr_r=" KERNEL_ADDR_R "\0"					\
-	"scriptaddr=0x100C000000\0"						\
-	"fit_addr=" FIT_ADDR "\0"						\
-	"dtb_addr=" DTB_ADDR "\0"						\
+	"flashless_addr=0x1240000000\0"						\
+	"ramfs_addr=0x1100000000\0"						\
+	"fdt_high=0x10121FFFFF\0"                                                \
+	"initrd_addr=0x1012200000\0"                                             \
+	"kernel_addr=0x10D7880000\0"                                             \
+        "kernel_addr_r=0x10D7880000\0"                                           \
+	"scriptaddr=0x100C000000\0"                                              \
+	"fit_addr=0x10A0000000\0"                                                \
+	"dtb_addr=0x1012000000\0"						\
 	"load_ramdisk=mmc read ${initrd_addr} 0x8000 0x1000\0"                 \
 	"load_kernel=mmc read ${kernel_addr} 0x0 0x6000\0"                     \
 	"boot_linux=booti ${kernel_addr} ${initrd_addr} ${fdt_addr}\0"         \

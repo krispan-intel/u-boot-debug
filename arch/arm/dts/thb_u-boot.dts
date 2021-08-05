@@ -46,21 +46,14 @@
 			no-map;
 		};
 	};
-#if CONFIG_THUNDERBAY_EVT2_ENABLE
+
 	sysmem@1010000000 {
 		compatible = "mmio-sram";
 		#address-cells = <2>;
 		#size-cells = <2>;
 		reg = <0x10 0x10000000 0x0 0x2000000>;
 		ranges = <0 0x0 0x10 0x10000000 0x0 0x2000000>;
-#else
-	sysmem@1008000000 {
-		compatible = "mmio-sram";
-		#address-cells = <2>;
-		#size-cells = <2>;
-		reg = <0x10 0x08000000 0x0 0x2000000>;
-		ranges = <0 0x0 0x10 0x08000000 0x0 0x2000000>;
-#endif
+
 		/*
 		* Allocate 1MB at fixed location for shared memory between
 		* non-secure world and BL31 to be used for SCMI.

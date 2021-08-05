@@ -50,7 +50,7 @@
 #endif
 
 /* Macro to define Kernel start address for Slice-1_2/1_3 configurations */
-#define SLICE_1_KERNEL_START_ADDR ((THB_SLICE_0_EN & THB_SLICE_1_EN & THB_SLICE_2_EN & THB_SLICE_3_EN)?(0x0):(0xD7880000))
+#define SLICE_1_KERNEL_START_ADDR ((THB_SLICE_0_EN & THB_SLICE_1_EN & THB_SLICE_2_EN & THB_SLICE_3_EN)?(0x0):(THB_KERNEL_START_ADDR))
 
 /* Macro to check THB-FULL/Prime config */
 
@@ -1236,6 +1236,7 @@
 				remote-host = <0x2>;
 				bus = <0x1>;
 			};
+#if (THB_SLICE_0_EN) && (THB_SLICE_1_EN) && (THB_SLICE_2_EN) && (THB_SLICE_3_EN)
 			tmp112@48 {
 				status = "okay";
 				compatible = "tmp112";
@@ -1247,6 +1248,7 @@
 				remote-host = <0x4>;
 				bus = <0x0>;
 			};
+#endif
 			adc081c@51 {
 				status = "okay";
                                 compatible = "adc081c";
@@ -1254,6 +1256,7 @@
                                 remote-host = <0x4>;
 				bus = <0x0>;
                         };
+#if (THB_SLICE_0_EN) && (THB_SLICE_1_EN) && (THB_SLICE_2_EN) && (THB_SLICE_3_EN)
 			ads7142@18 {
 				status = "disabled";
 				compatible = "ads7142";
@@ -1269,7 +1272,7 @@
 				remote-host = <0x4>;
 				bus = <0x0>;
 			};
-
+#endif
 		 };
 		hddl_reset: reset_info {
 			board0 {
@@ -2659,11 +2662,11 @@
 			#size-cells = <1>;
 			ranges = <0x00000000 0x01 0x00000000 0x80000000>, /* 2GB */
 				 <0x80000000 0x18 0x00000000 0x01800000>, /* 24MB - CSRAM */
-				 <0x81800000 THB_SLICE_0_UPPER32BITS_ADDR 0x2D000000 0x13600000>, /* 310MB - DDR */
+				 <0x81800000 THB_SLICE_0_UPPER32BITS_ADDR THB_VPU_PR_START_ADDR 0x13600000>, /* 310MB - DDR */
 				 <0x94E00000 0x01 0x85400000 0x200000>, /* 2MB - VPU CPR */
-				 <0x95000000 THB_SLICE_0_UPPER32BITS_ADDR 0x40800000 0x6B000000>; /* 1712MB - DDR */
-			dma-ranges = <0x81800000 THB_SLICE_0_UPPER32BITS_ADDR 0x2D000000 0x13600000>, /* 310MB - DDR */
-				     <0x95000000 THB_SLICE_0_UPPER32BITS_ADDR 0x40800000 0x6B000000>; /* 1712MB - DDR */
+				 <0x95000000 THB_SLICE_0_UPPER32BITS_ADDR THB_VPU_PR_END_ADDR 0x6B000000>; /* 1712MB - DDR */
+			dma-ranges = <0x81800000 THB_SLICE_0_UPPER32BITS_ADDR THB_VPU_PR_START_ADDR 0x13600000>, /* 310MB - DDR */
+				     <0x95000000 THB_SLICE_0_UPPER32BITS_ADDR THB_VPU_PR_END_ADDR 0x6B000000>; /* 1712MB - DDR */
 
 			slice0_ipc: ipc@203300f0 {
 				status = "okay";
@@ -2785,9 +2788,9 @@
 				#intel,smmu_params-cells = <0x5>;
 				compatible  = "intel,vpu";
 				intel,smmu_params = <0x80000000 0x18 0x00000000 0x01800000 (IOMMU_READ|IOMMU_WRITE)>, /* 24 MB */
-						    <0x81800000 THB_SLICE_0_UPPER32BITS_ADDR 0x2D000000 0x13600000 (IOMMU_READ|IOMMU_WRITE)>, /* 310 MB */
+						    <0x81800000 THB_SLICE_0_UPPER32BITS_ADDR THB_VPU_PR_START_ADDR 0x13600000 (IOMMU_READ|IOMMU_WRITE)>, /* 310 MB */
 						    <0x94E00000 0x01 0x85400000 0x200000 (IOMMU_READ|IOMMU_WRITE)>, /* 2MB */
-						    <0x95000000 THB_SLICE_0_UPPER32BITS_ADDR 0x40800000 0x6B000000 (IOMMU_READ|IOMMU_WRITE)>; /* 1712 MB */
+						    <0x95000000 THB_SLICE_0_UPPER32BITS_ADDR THB_VPU_PR_END_ADDR 0x6B000000 (IOMMU_READ|IOMMU_WRITE)>; /* 1712 MB */
 
 				iommus = <&vpu_smmu0 47>,
 					 <&vpu_smmu0 45>,
@@ -2810,7 +2813,11 @@
 				intel,keembay-vpu-ipc-id = <0x0>;
 				intel,keembay-vpu-phys-slice-id = <0x0>;
 			};
-
+			vpu_reset0 {
+				compatible = "intel,vpu-reset";
+				resets = <&rst_comss0 0x1>;
+				intel,reset-slice-id = <0x0>;
+			};
 		};
 
             media_slice0: media_slice0@185538000 {
@@ -3051,17 +3058,17 @@
 			ranges = <0x00000000 0x02 0x00000000 0x80000000>, /* 2GB */
 				 <0x80000000 0x18 0x00000000 0x01800000>, /* 24MB - CSRAM */
 #if (THB_SEC_SLICE)
-				 <0x81800000 THB_SLICE_1_UPPER32BITS_ADDR 0x2D000000 0x13600000>, /* 310MB - DDR */
+				 <0x81800000 THB_SLICE_1_UPPER32BITS_ADDR THB_VPU_PR_START_ADDR 0x13600000>, /* 310MB - DDR */
 				 <0x94E00000 0x01 0x85400000 0x200000>, /* 2MB - VPU CPR */
-				 <0x95000000 THB_SLICE_1_UPPER32BITS_ADDR 0x40800000 0x6B000000>; /* 1712MB - DDR */
-			dma-ranges = <0x81800000 THB_SLICE_1_UPPER32BITS_ADDR 0x2D000000 0x13600000>, /* 310MB - DDR */
-				     <0x95000000 THB_SLICE_1_UPPER32BITS_ADDR 0x40800000 0x6B000000>; /* 1712MB - DDR */
+				 <0x95000000 THB_SLICE_1_UPPER32BITS_ADDR THB_VPU_PR_END_ADDR 0x6B000000>; /* 1712MB - DDR */
+			dma-ranges = <0x81800000 THB_SLICE_1_UPPER32BITS_ADDR THB_VPU_PR_START_ADDR 0x13600000>, /* 310MB - DDR */
+				     <0x95000000 THB_SLICE_1_UPPER32BITS_ADDR THB_VPU_PR_END_ADDR 0x6B000000>; /* 1712MB - DDR */
 #else
-				 <0x81800000 THB_SLICE_1_UPPER32BITS_ADDR 0x0D000000 0x13600000>, /* 310MB - DDR */
+				 <0x81800000 THB_SLICE_1_UPPER32BITS_ADDR THB_VPU_SEC_START_ADDR 0x13600000>, /* 310MB - DDR */
 				 <0x94E00000 0x01 0x85400000 0x200000>, /* 2MB - VPU CPR */
-				 <0x95000000 THB_SLICE_1_UPPER32BITS_ADDR 0x20800000 0x6B000000>; /* 1712MB - DDR */
-			dma-ranges = <0x81800000 THB_SLICE_1_UPPER32BITS_ADDR 0x0D000000 0x13600000>, /* 310MB - DDR */
-				     <0x95000000 THB_SLICE_1_UPPER32BITS_ADDR 0x20800000 0x6B000000>; /* 1712MB - DDR */
+				 <0x95000000 THB_SLICE_1_UPPER32BITS_ADDR THB_VPU_SEC_END_ADDR 0x6B000000>; /* 1712MB - DDR */
+			dma-ranges = <0x81800000 THB_SLICE_1_UPPER32BITS_ADDR THB_VPU_SEC_START_ADDR 0x13600000>, /* 310MB - DDR */
+				     <0x95000000 THB_SLICE_1_UPPER32BITS_ADDR THB_VPU_SEC_END_ADDR 0x6B000000>; /* 1712MB - DDR */
 #endif
 
 			slice1_ipc: ipc@203300f0 {
@@ -3182,14 +3189,14 @@
 				compatible  = "intel,vpu";
 #if (THB_SEC_SLICE)
 				intel,smmu_params = <0x80000000 0x18 0x00000000 0x01800000 (IOMMU_READ|IOMMU_WRITE)>, /* 24 MB */
-						    <0x81800000 THB_SLICE_1_UPPER32BITS_ADDR 0x2D000000 0x13600000 (IOMMU_READ|IOMMU_WRITE)>, /* 310 MB */
+						    <0x81800000 THB_SLICE_1_UPPER32BITS_ADDR THB_VPU_PR_START_ADDR 0x13600000 (IOMMU_READ|IOMMU_WRITE)>, /* 310 MB */
 						    <0x94E00000 0x01 0x85400000 0x200000 (IOMMU_READ|IOMMU_WRITE)>, /* 2MB */
-						    <0x95000000 THB_SLICE_1_UPPER32BITS_ADDR 0x40800000 0x6B000000 (IOMMU_READ|IOMMU_WRITE)>; /* 1712 MB */
+						    <0x95000000 THB_SLICE_1_UPPER32BITS_ADDR THB_VPU_PR_END_ADDR 0x6B000000 (IOMMU_READ|IOMMU_WRITE)>; /* 1712 MB */
 #else
 				intel,smmu_params = <0x80000000 0x18 0x00000000 0x01800000 (IOMMU_READ|IOMMU_WRITE)>, /* 24 MB */
-						    <0x81800000 THB_SLICE_1_UPPER32BITS_ADDR 0x0D000000 0x13600000 (IOMMU_READ|IOMMU_WRITE)>, /* 310 MB */
+						    <0x81800000 THB_SLICE_1_UPPER32BITS_ADDR THB_VPU_SEC_START_ADDR 0x13600000 (IOMMU_READ|IOMMU_WRITE)>, /* 310 MB */
 						    <0x94E00000 0x01 0x85400000 0x200000 (IOMMU_READ|IOMMU_WRITE)>, /* 2MB */
-						    <0x95000000 THB_SLICE_1_UPPER32BITS_ADDR 0x20800000 0x6B000000 (IOMMU_READ|IOMMU_WRITE)>; /* 1712 MB */
+						    <0x95000000 THB_SLICE_1_UPPER32BITS_ADDR THB_VPU_SEC_END_ADDR 0x6B000000 (IOMMU_READ|IOMMU_WRITE)>; /* 1712 MB */
 #endif
 
 				iommus = <&vpu_smmu1 47>,
@@ -3217,6 +3224,11 @@
 #endif
                                 intel,keembay-vpu-phys-slice-id = <0x1>;
 
+			};
+			vpu_reset1 {
+				compatible = "intel,vpu-reset";
+				resets = <&rst_comss1 0x1>;
+				intel,reset-slice-id = <0x1>;
 			};
 		};
 
@@ -3457,11 +3469,11 @@
 			#size-cells = <1>;
 			ranges = <0x00000000 0x03 0x00000000 0x80000000>, /* 2GB */
 				 <0x80000000 0x18 0x00000000 0x01800000>, /* 24MB - CSRAM */
-				 <0x81800000 THB_SLICE_2_UPPER32BITS_ADDR 0x0D000000 0x13600000>, /* 310MB - DDR */
+				 <0x81800000 THB_SLICE_2_UPPER32BITS_ADDR THB_VPU_SEC_START_ADDR 0x13600000>, /* 310MB - DDR */
 				 <0x94E00000 0x01 0x85400000 0x200000>, /* 2MB - VPU CPR */
-				 <0x95000000 THB_SLICE_2_UPPER32BITS_ADDR 0x20800000 0x6B000000>; /* 1712MB - DDR */
-			dma-ranges = <0x81800000 THB_SLICE_2_UPPER32BITS_ADDR 0x0D000000 0x13600000>, /* 310MB - DDR */
-				     <0x95000000 THB_SLICE_2_UPPER32BITS_ADDR 0x20800000 0x6B000000>; /* 1712MB - DDR */
+				 <0x95000000 THB_SLICE_2_UPPER32BITS_ADDR THB_VPU_SEC_END_ADDR 0x6B000000>; /* 1712MB - DDR */
+			dma-ranges = <0x81800000 THB_SLICE_2_UPPER32BITS_ADDR THB_VPU_SEC_START_ADDR 0x13600000>, /* 310MB - DDR */
+				     <0x95000000 THB_SLICE_2_UPPER32BITS_ADDR THB_VPU_SEC_END_ADDR 0x6B000000>; /* 1712MB - DDR */
 
 			slice2_ipc: ipc@203300f0 {
 				compatible = "intel,keembay-ipc";
@@ -3575,9 +3587,9 @@
 				#intel,smmu_params-cells = <0x5>;
 				compatible  = "intel,vpu";
 				intel,smmu_params = <0x80000000 0x18 0x00000000 0x01800000 (IOMMU_READ|IOMMU_WRITE)>, /* 24 MB */
-						    <0x81800000 THB_SLICE_2_UPPER32BITS_ADDR 0x0D000000 0x13600000 (IOMMU_READ|IOMMU_WRITE)>, /* 310 MB */
+						    <0x81800000 THB_SLICE_2_UPPER32BITS_ADDR THB_VPU_SEC_START_ADDR 0x13600000 (IOMMU_READ|IOMMU_WRITE)>, /* 310 MB */
 						    <0x94E00000 0x01 0x85400000 0x200000 (IOMMU_READ|IOMMU_WRITE)>, /* 2 MB */
-						    <0x95000000 THB_SLICE_2_UPPER32BITS_ADDR 0x20800000 0x6B000000 (IOMMU_READ|IOMMU_WRITE)>; /* 1712 MB */
+						    <0x95000000 THB_SLICE_2_UPPER32BITS_ADDR THB_VPU_SEC_END_ADDR 0x6B000000 (IOMMU_READ|IOMMU_WRITE)>; /* 1712 MB */
 
 				iommus = <&vpu_smmu2 47>,
 					 <&vpu_smmu2 45>,
@@ -3604,6 +3616,11 @@
 #endif
                                 intel,keembay-vpu-phys-slice-id = <0x2>;
 
+			};
+			vpu_reset2 {
+				compatible = "intel,vpu-reset";
+				resets = <&rst_comss2 0x1>;
+				intel,reset-slice-id = <0x2>;
 			};
 		};
 
@@ -3845,11 +3862,11 @@
 			#size-cells = <1>;
 			ranges = <0x00000000 0x04 0x00000000 0x80000000>, /* 2GB */
 				 <0x80000000 0x18 0x00000000 0x01800000>, /* 24MB - CSRAM */
-				 <0x81800000 THB_SLICE_3_UPPER32BITS_ADDR 0x0D000000 0x13600000>, /* 310MB - DDR */
+				 <0x81800000 THB_SLICE_3_UPPER32BITS_ADDR THB_VPU_SEC_START_ADDR 0x13600000>, /* 310MB - DDR */
 				 <0x94E00000 0x01 0x85400000 0x200000>, /* 2MB - VPU CPR */
-				 <0x95000000 THB_SLICE_3_UPPER32BITS_ADDR 0x20800000 0x6B000000>; /* 1712MB - DDR */
-			dma-ranges = <0x81800000 THB_SLICE_3_UPPER32BITS_ADDR 0x0D000000 0x13600000>, /* 310MB - DDR */
-				     <0x95000000 THB_SLICE_3_UPPER32BITS_ADDR 0x20800000 0x6B000000>; /* 1712MB - DDR */
+				 <0x95000000 THB_SLICE_3_UPPER32BITS_ADDR THB_VPU_SEC_END_ADDR 0x6B000000>; /* 1712MB - DDR */
+			dma-ranges = <0x81800000 THB_SLICE_3_UPPER32BITS_ADDR THB_VPU_SEC_START_ADDR 0x13600000>, /* 310MB - DDR */
+				     <0x95000000 THB_SLICE_3_UPPER32BITS_ADDR THB_VPU_SEC_END_ADDR 0x6B000000>; /* 1712MB - DDR */
 
 			slice3_ipc: ipc@203300f0 {
 				compatible = "intel,keembay-ipc";
@@ -3963,9 +3980,9 @@
 				#intel,smmu_params-cells = <0x5>;
 				compatible  = "intel,vpu";
 				intel,smmu_params = <0x80000000 0x18 0x00000000 0x01800000 (IOMMU_READ|IOMMU_WRITE)>, /* 24 MB */
-						    <0x81800000 THB_SLICE_3_UPPER32BITS_ADDR 0x0D000000 0x13600000 (IOMMU_READ|IOMMU_WRITE)>, /* 310 MB */
+						    <0x81800000 THB_SLICE_3_UPPER32BITS_ADDR THB_VPU_SEC_START_ADDR 0x13600000 (IOMMU_READ|IOMMU_WRITE)>, /* 310 MB */
 						    <0x94E00000 0x01 0x85400000 0x200000 (IOMMU_READ|IOMMU_WRITE)>, /* 2 MB */
-						    <0x95000000 THB_SLICE_3_UPPER32BITS_ADDR 0x20800000 0x6B000000 (IOMMU_READ|IOMMU_WRITE)>; /* 1712 MB */
+						    <0x95000000 THB_SLICE_3_UPPER32BITS_ADDR THB_VPU_SEC_END_ADDR 0x6B000000 (IOMMU_READ|IOMMU_WRITE)>; /* 1712 MB */
 
 				iommus = <&vpu_smmu3 47>,
 					 <&vpu_smmu3 45>,
@@ -3991,6 +4008,11 @@
                                 intel,keembay-vpu-ipc-id = <0x1>;
 #endif
                                 intel,keembay-vpu-phys-slice-id = <0x3>;
+			};
+			vpu_reset3 {
+				compatible = "intel,vpu-reset";
+				resets = <&rst_comss3 0x1>;
+				intel,reset-slice-id = <0x3>;
 			};
 		};
 
@@ -4396,6 +4418,11 @@
 #endif
 
 	};
-
+	noc_isr {
+		compatible = "intel,noc_isr";
+		interrupts = <0x0 0x297 0x1 0x0 0x295 0x1 0x0 0x293 0x1 0x0 0x291 0x1 0x0 0xc 0x1 0x0 0x28e 0x1 0x0 0x28c 0x1 0x0 0x296 0x1 0x0 0x294 0x1 0x0 0x292 0x1 0x0 0x290 0x1 0x0 0x28f 0x1 0x0 0xd 0x1>;
+		interrupt-names = "noc_s0_sec_irq", "noc_s1_sec_irq", "noc_s2_sec_irq", "noc_s3_sec_irq", "noc_cpuss_sec_irq", "noc_periphss_sec_irq", "noc_soc_noc_sec_irq", "noc_s0_irq", "noc_s1_irq", "noc_s2_irq", "noc_s3_irq", "noc_periphss_irq", "noc_cpuss_irq";
+		status = "okay";
+	};
 };
 

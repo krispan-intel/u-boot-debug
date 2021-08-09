@@ -8,9 +8,7 @@
 #include <errno.h>
 #include <asm/arch/sip_svc.h>
 #include <asm/arch/thb_shared_mem.h>
-
-/** efuse array bits. */
-#define MA_EFUSE_NUM_BITS (8192 + 4096)  /* 8K+4K Bits */
+#include <asm/arch/boot/thb-efuse.h>
 
 #define FUSE_BLOB_LOAD_BASE 0x101A000000
 
@@ -84,7 +82,7 @@ static void efuse_error_status(int rc)
 	}
 }
 
-static int efuse_read_ranges(u32 * const boot_operation,
+int efuse_read_ranges(u32 * const boot_operation,
 			     const u32 start_u32_idx,
 			     const u32 end_u32_idx)
 {
@@ -107,7 +105,7 @@ static int efuse_read_ranges(u32 * const boot_operation,
 	return CMD_RET_SUCCESS;
 }
 
-static int efuse_write_ranges(u32 * const boot_operation,
+int efuse_write_ranges(u32 * const boot_operation,
 			      u32 * const fuse_mask, const u32 start_u32_idx,
 			      const u32 end_u32_idx, const u32 flags)
 {

@@ -32,6 +32,7 @@
 #include "thb_pad_cfg.h"
 #include "thb_ddr_prof.h"
 #include "tpm-eventlog.h"
+#include <asm/arch/boot/thb-efuse.h>
 
 #define GPIO_MICRON_FLASH_PULL_UP       20
 
@@ -69,6 +70,9 @@
 #define BUFF_LEN			6
 #define DRAM_SZ_LEN			10
 #define MRC_VER_LEN			5
+
+#define SVN_START_ADDR			0xA0
+#define SVN_END_ADDR			0xA3
 
 const char version_string[] = U_BOOT_VERSION_STRING CC_VERSION_STRING;
 
@@ -1832,6 +1836,107 @@ int ddr_prof_setup_boot_args(void)
 	if (ddr_prof_add_boot_args(thb_full, slice)) {
 		pr_info("%s- Failed to add ddr profiling arguments\n", __func__);
 		return 1;
+	}
+
+	return 0;
+}
+
+int tbh_os_svn_get(u32 *svn)
+{
+	u32 *boot_operation = NULL;
+	u32 fuse_val = 0, bit_pos = 0, svn_idx = 0;
+	u32 num_fuse_entries = 0;
+	int i = 0;
+
+	/* start and end index of os svn */
+	if (SVN_START_ADDR >= MA_EFUSE_NUM_BITS / 64) {
+		efuse_error_status(-EINVAL);
+		return CMD_RET_FAILURE;
+	}
+
+	if (SVN_END_ADDR >= MA_EFUSE_NUM_BITS / 64) {
+		efuse_error_status(-EINVAL);
+		return CMD_RET_FAILURE;
+	}
+
+	if (SVN_END_ADDR < SVN_START_ADDR) {
+		efuse_error_status(-EINVAL);
+		return CMD_RET_FAILURE;
+	}
+
+	num_fuse_entries = (SVN_END_ADDR - SVN_START_ADDR) + 1;
+	boot_operation = get_secure_shmem_ptr((sizeof(u32) * num_fuse_entries));
+	if (!boot_operation) {
+		log_err("Unable to retrieve shared memory.\n");
+		return CMD_RET_FAILURE;
+	}
+	memset((void *)boot_operation, 0, (sizeof(u32) * num_fuse_entries));
+	efuse_read_ranges(boot_operation, SVN_START_ADDR, SVN_END_ADDR);
+
+	/* Find SVN value in fuse */
+	for (i = 3; i >= 0; i--) {
+		bit_pos = 0;
+		fuse_val = boot_operation[i];
+		if (fuse_val == 0) {
+			svn_idx = svn_idx + 1;
+			continue;
+		}
+		fuse_val = fuse_val/2;
+		while (fuse_val != 0) {
+			fuse_val = fuse_val/2;
+			bit_pos++;
+		}
+		break;
+	}
+
+	if (svn_idx == 4)
+		*svn = boot_operation[0] & BIT(0);
+	else
+		*svn = (((i * 32) + bit_pos) + 1);
+
+	return 0;
+}
+
+int tbh_os_svn_set(u32 svn)
+{
+	u32 *fuse_mask, *boot_operation = NULL;
+	u32 num_fuse_entries = 0, flags = 0;
+	int i = 0;
+
+	/* start and end index of os svn */
+	if (SVN_START_ADDR >= MA_EFUSE_NUM_BITS / 64) {
+		efuse_error_status(-EINVAL);
+		return CMD_RET_FAILURE;
+	}
+
+	if (SVN_END_ADDR >= MA_EFUSE_NUM_BITS / 64) {
+		efuse_error_status(-EINVAL);
+		return CMD_RET_FAILURE;
+	}
+
+	if (SVN_END_ADDR < SVN_START_ADDR) {
+		efuse_error_status(-EINVAL);
+		return CMD_RET_FAILURE;
+	}
+
+	num_fuse_entries = (SVN_END_ADDR - SVN_START_ADDR) + 1;
+
+	boot_operation = get_secure_shmem_ptr((sizeof(u32) * num_fuse_entries));
+
+	if (!boot_operation) {
+		log_err("Unable to retrieve shared memory.\n");
+		return CMD_RET_FAILURE;
+	}
+
+	memset((void *)boot_operation, 0, (sizeof(u32) * num_fuse_entries));
+	fuse_mask = boot_operation + (sizeof(u32) * num_fuse_entries);
+	memset((void *)fuse_mask, 0, (sizeof(u32) * num_fuse_entries));
+
+	if (svn != 0) {
+		i = (svn - 1)/32;
+		fuse_mask[i] = 1 << ((svn - 1)%32);
+		efuse_write_ranges(boot_operation, fuse_mask, SVN_START_ADDR,
+					SVN_END_ADDR, flags);
 	}
 
 	return 0;

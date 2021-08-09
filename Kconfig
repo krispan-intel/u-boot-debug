@@ -506,6 +506,12 @@ choice
                   The current SVN is stored using a board-specific mechanism.
                   Board is expected to define 'board_svn_get()' and
                   'board_svn_set()' functions.
+
+	config THUNDERBAY_FIT_SVN_STORAGE
+		bool "Store OS SVN in fuse"
+		help
+		  The current SVN is stored in the Fuse.
+
 endchoice
 
 config FIT_ENABLE_RSASSA_PSS_SUPPORT

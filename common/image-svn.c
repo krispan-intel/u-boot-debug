@@ -18,10 +18,11 @@
 #define SECURE_SKU (env_get_ulong("SECURE_SKU", 2, 1))
 
 /*TODO: remove this to get the svn from board. Currently SVN is getting from u-boot env */
-#define CONFIG_FIT_SVN_STORAGE_ENV 1
+//#define CONFIG_FIT_SVN_STORAGE_ENV 1
 
 /* The name of the SVN node in the FIT image. */
 #define FIT_SVN_NODENAME "svn"
+#define SVN_MAX_NUM      128
 
 #if defined(CONFIG_FIT_SVN_STORAGE_ENV)
 /* Use U-Boot environment for storing SVN. */
@@ -69,6 +70,9 @@ static int env_svn_set(u32 new_svn)
 /* Use board-specific functions for storing and retrieving SVN. */
 #define svn_get(svn) board_svn_get(svn)
 #define svn_set(svn) board_svn_set(svn)
+#elif defined(CONFIG_THUNDERBAY_FIT_SVN_STORAGE)
+#define svn_get(svn) tbh_os_svn_get(svn)
+#define svn_set(svn) tbh_os_svn_set(svn)
 #endif /* CONFIG_FIT_SVN_STORAGE_ENV */
 
 int fit_config_check_svn(const void *fit, int conf_noffset)
@@ -98,6 +102,10 @@ int fit_config_check_svn(const void *fit, int conf_noffset)
 		return -EILSEQ;
 	}
 	svn_img = fdt32_to_cpu(*(fdt32_t *)prop->data);
+
+	if (svn_img > SVN_MAX_NUM)
+		return -EINVAL;
+
 	/* Compare image SVN with current SVN. */
 	if (svn_img < svn_cur) {
 		return -EPERM;

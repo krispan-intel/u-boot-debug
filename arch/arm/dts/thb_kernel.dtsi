@@ -2668,23 +2668,15 @@
 			dma-ranges = <0x81800000 THB_SLICE_0_UPPER32BITS_ADDR THB_VPU_PR_START_ADDR 0x13600000>, /* 310MB - DDR */
 				     <0x95000000 THB_SLICE_0_UPPER32BITS_ADDR THB_VPU_PR_END_ADDR 0x6B000000>; /* 1712MB - DDR */
 
-			slice0_ipc: ipc@203300f0 {
+			slice0_vpu_ipc_mbox: vpu-ipc-mbox@203300f0 {
 				status = "okay";
-				compatible = "intel,keembay-ipc";
+				compatible = "intel,keembay-ipc-mailbox";
+				#mbox-cells = <1>;
 				reg = <0x203300f0 0x310>, /* ARM TIM FIFO */
 				      <0x208200f0 0x310>; /* MSS TIM FIFO */
-				reg-names = "css_fifo", "mss_fifo";
-				/* GIC interrupt number: 938 (906 + 32). */
+				reg-names = "cpu_fifo", "vpu_fifo";
 				interrupts = <GIC_SPI 906 IRQ_TYPE_LEVEL_HIGH>;
 				interrupt-names = "css_fifo";
-				memory-region = <&slice0_css_ipc_reserved>,
-						<&slice0_mss_ipc_reserved>;
-				/*
-				 * TODO: Re-enable the following clock
-				 * definition and update it to the correct
-				 * value once SCMI clocks are support in ATF.
-				 */
-				//clocks = <&scmi_clk KEEM_BAY_A53_TIM>;
 			};
 
 			slice0_vpuipc: vpu-ipc@3f00209c {
@@ -2711,7 +2703,14 @@
 				 */
 				memory-region = <&slice0_vpu_reserved>,
 						<&vpu_x509_reserved>,
+						<&slice0_css_ipc_reserved>,
 						<&slice0_mss_ipc_reserved>;
+
+				memory-region-names = "fw-area",
+						      "x509-area",
+						      "ipc-mem-cpu",
+						      "ipc-mem-vpu";
+				mboxes  = <&slice0_vpu_ipc_mbox 0x0>;
 				/*
 				 * TODO: rename 'cpu_clock' to 'vpu_clock' and
 				 * remove all the PLL clocks once the VPU/IPC
@@ -2756,7 +2755,7 @@
 				 */
 				intel,keembay-vpu-ipc-imr = <9>;
 				intel,keembay-vpu-ipc-id = <0>;
-				intel,keembay-ipc = <&slice0_ipc>;
+				intel,keembay-vpu-ipc-start-addr = <0x84800000>;
 				/* TODO:
 				 * Add power domain support to drivers, enable in
 				 * device tree.
@@ -2766,7 +2765,6 @@
 			};
 
 			xlink-ipc0 {
-				status = "okay";
 				compatible = "intel,keembay-xlink-ipc";
 				memory-region = <&slice0_css_xlink_reserved>,
 						<&slice0_mss_xlink_reserved>,
@@ -3071,22 +3069,15 @@
 				     <0x95000000 THB_SLICE_1_UPPER32BITS_ADDR THB_VPU_SEC_END_ADDR 0x6B000000>; /* 1712MB - DDR */
 #endif
 
-			slice1_ipc: ipc@203300f0 {
-				compatible = "intel,keembay-ipc";
+			slice1_vpu_ipc_mbox: vpu-ipc-mbox@203300f0 {
+				status = "okay";
+				compatible = "intel,keembay-ipc-mailbox";
+				#mbox-cells = <1>;
 				reg = <0x203300f0 0x310>, /* ARM TIM FIFO */
 				      <0x208200f0 0x310>; /* MSS TIM FIFO */
-				reg-names = "css_fifo", "mss_fifo";
-				/* GIC interrupt number 880 (848 + 32). */
+				reg-names = "cpu_fifo", "vpu_fifo";
 				interrupts = <GIC_SPI 848 IRQ_TYPE_LEVEL_HIGH>;
 				interrupt-names = "css_fifo";
-				memory-region = <&slice1_css_ipc_reserved>,
-						<&slice1_mss_ipc_reserved>;
-				/*
-				 * TODO: Re-enable the following clock
-				 * definition and update it to the correct
-				 * value once SCMI clocks are support in ATF.
-				 */
-				//clocks = <&scmi_clk KEEM_BAY_A53_TIM>;
 			};
 
 			slice1_vpuipc: vpu-ipc@3f00209c {
@@ -3112,7 +3103,14 @@
 				 */
 				memory-region = <&slice1_vpu_reserved>,
 						<&vpu_x509_reserved>,
+						<&slice1_css_ipc_reserved>,
 						<&slice1_mss_ipc_reserved>;
+
+				memory-region-names = "fw-area",
+						      "x509-area",
+						      "ipc-mem-cpu",
+						      "ipc-mem-vpu";
+				mboxes  = <&slice1_vpu_ipc_mbox 0x0>;
 				/*
 				 * TODO: rename 'cpu_clock' to 'vpu_clock' and
 				 * remove all the PLL clocks once the VPU/IPC
@@ -3157,7 +3155,7 @@
 				 */
 				intel,keembay-vpu-ipc-imr = <9>;
 				intel,keembay-vpu-ipc-id = <1>;
-				intel,keembay-ipc = <&slice1_ipc>;
+				intel,keembay-vpu-ipc-start-addr = <0x84800000>;
 				/* TODO:
 				 * Add power domain support to drivers, enable in
 				 * device tree.
@@ -3475,22 +3473,15 @@
 			dma-ranges = <0x81800000 THB_SLICE_2_UPPER32BITS_ADDR THB_VPU_SEC_START_ADDR 0x13600000>, /* 310MB - DDR */
 				     <0x95000000 THB_SLICE_2_UPPER32BITS_ADDR THB_VPU_SEC_END_ADDR 0x6B000000>; /* 1712MB - DDR */
 
-			slice2_ipc: ipc@203300f0 {
-				compatible = "intel,keembay-ipc";
+			slice2_vpu_ipc_mbox: vpu-ipc-mbox@203300f0 {
+				status = "okay";
+				compatible = "intel,keembay-ipc-mailbox";
+				#mbox-cells = <1>;
 				reg = <0x203300f0 0x310>, /* ARM TIM FIFO */
 				      <0x208200f0 0x310>; /* MSS TIM FIFO */
-				reg-names = "css_fifo", "mss_fifo";
-				/* GIC interrupt number 822 (790 + 32). */
+				reg-names = "cpu_fifo", "vpu_fifo";
 				interrupts = <GIC_SPI 790 IRQ_TYPE_LEVEL_HIGH>;
 				interrupt-names = "css_fifo";
-				memory-region = <&slice2_css_ipc_reserved>,
-						<&slice2_mss_ipc_reserved>;
-				/*
-				 * TODO: Re-enable the following clock
-				 * definition and update it to the correct
-				 * value once SCMI clocks are support in ATF.
-				 */
-				//clocks = <&scmi_clk KEEM_BAY_A53_TIM>;
 			};
 
 			slice2_vpuipc: vpu-ipc@3f00209c {
@@ -3511,7 +3502,14 @@
 				 */
 				memory-region = <&slice2_vpu_reserved>,
 						<&vpu_x509_reserved>,
+						<&slice2_css_ipc_reserved>,
 						<&slice2_mss_ipc_reserved>;
+
+				memory-region-names = "fw-area",
+						      "x509-area",
+						      "ipc-mem-cpu",
+						      "ipc-mem-vpu";
+				mboxes  = <&slice2_vpu_ipc_mbox 0x0>;
 				/*
 				 * TODO: rename 'cpu_clock' to 'vpu_clock' and
 				 * remove all the PLL clocks once the VPU/IPC
@@ -3556,7 +3554,7 @@
 				 */
 				intel,keembay-vpu-ipc-imr = <9>;
 				intel,keembay-vpu-ipc-id = <2>;
-				intel,keembay-ipc = <&slice2_ipc>;
+				intel,keembay-vpu-ipc-start-addr = <0x84800000>;
 				/* TODO:
 				 * Add power domain support to drivers, enable in
 				 * device tree.
@@ -3868,22 +3866,15 @@
 			dma-ranges = <0x81800000 THB_SLICE_3_UPPER32BITS_ADDR THB_VPU_SEC_START_ADDR 0x13600000>, /* 310MB - DDR */
 				     <0x95000000 THB_SLICE_3_UPPER32BITS_ADDR THB_VPU_SEC_END_ADDR 0x6B000000>; /* 1712MB - DDR */
 
-			slice3_ipc: ipc@203300f0 {
-				compatible = "intel,keembay-ipc";
+			slice3_vpu_ipc_mbox: vpu-ipc-mbox@203300f0 {
+				status = "okay";
+				compatible = "intel,keembay-ipc-mailbox";
+				#mbox-cells = <1>;
 				reg = <0x203300f0 0x310>, /* ARM TIM FIFO */
 				      <0x208200f0 0x310>; /* MSS TIM FIFO */
-				reg-names = "css_fifo", "mss_fifo";
-				/* GIC interrupt number 764 (732 + 32). */
+				reg-names = "cpu_fifo", "vpu_fifo";
 				interrupts = <GIC_SPI 732 IRQ_TYPE_LEVEL_HIGH>;
 				interrupt-names = "css_fifo";
-				memory-region = <&slice3_css_ipc_reserved>,
-						<&slice3_mss_ipc_reserved>;
-				/*
-				 * TODO: Re-enable the following clock
-				 * definition and update it to the correct
-				 * value once SCMI clocks are support in ATF.
-				 */
-				//clocks = <&scmi_clk KEEM_BAY_A53_TIM>;
 			};
 
 			slice3_vpuipc: vpu-ipc@3f00209c {
@@ -3904,7 +3895,14 @@
 				 */
 				memory-region = <&slice3_vpu_reserved>,
 						<&vpu_x509_reserved>,
+						<&slice3_css_ipc_reserved>,
 						<&slice3_mss_ipc_reserved>;
+
+				memory-region-names = "fw-area",
+						      "x509-area",
+						      "ipc-mem-cpu",
+						      "ipc-mem-vpu";
+				mboxes  = <&slice3_vpu_ipc_mbox 0x0>;
 				/*
 				 * TODO: rename 'cpu_clock' to 'vpu_clock' and
 				 * remove all the PLL clocks once the VPU/IPC
@@ -3949,7 +3947,7 @@
 				 */
 				intel,keembay-vpu-ipc-imr = <9>;
 				intel,keembay-vpu-ipc-id = <3>;
-				intel,keembay-ipc = <&slice3_ipc>;
+				intel,keembay-vpu-ipc-start-addr = <0x84800000>;
 				/* TODO:
 				 * Add power domain support to drivers, enable in
 				 * device tree.

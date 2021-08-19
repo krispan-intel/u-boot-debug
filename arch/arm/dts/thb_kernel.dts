@@ -111,7 +111,7 @@
 			};
 
 			/* Allocate 256MB at fixed location for VPU */
-			slice0_vpu_reserved: vpu_reserved@1084800000 {
+			slice0_vpu_secure: vpu_secure@1084800000 {
 				compatible = "shared-dma-pool";
 				reg = <THB_SLICE_0_UPPER32BITS_ADDR 0x84800000 0x0 0x10000000>; /* 256MB */
 				no-map;
@@ -191,6 +191,14 @@
 				reg = <THB_SLICE_0_UPPER32BITS_ADDR 0x74000000 0x0 0xC000000>; /* 192MB */
 				reusable;
 			};
+			/* Non secure VPU reserved */
+			slice0_vpu_reserved: vpu_reserved@1080000000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_0_UPPER32BITS_ADDR 0x80000000 0x0 0x2000000>; /* 32MB */
+				no-map;
+			};
+
+
 		};
 #endif
 
@@ -209,7 +217,7 @@
 			};
 
 			/* Allocate 256MB at fixed location for VPU */
-			slice1_vpu_reserved: vpu_reserved@1284800000 {
+			slice1_vpu_secure: vpu_secure@1284800000 {
 				compatible = "shared-dma-pool";
 				reg = <THB_SLICE_1_UPPER32BITS_ADDR 0x84800000 0x0 0x10000000>; /* 256MB */
 				no-map;
@@ -288,6 +296,12 @@
 				reg = <THB_SLICE_1_UPPER32BITS_ADDR 0x74000000 0x0 0xC000000>; /* 192MB */
 				reusable;
 			};
+			/* Non secure VPU reserved */
+			slice1_vpu_reserved: vpu_reserved@1280000000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_1_UPPER32BITS_ADDR 0x80000000 0x0 0x2000000>; /* 32MB */
+				no-map;
+			};
 		};
 #endif
 
@@ -306,7 +320,7 @@
 
 
 			/* Allocate 256MB at fixed location for VPU */
-			slice2_vpu_reserved: vpu_reserved@1484800000 {
+			slice2_vpu_secure: vpu_secure@1484800000 {
 				compatible = "shared-dma-pool";
 				reg = <THB_SLICE_2_UPPER32BITS_ADDR 0x84800000 0x0 0x10000000>; /* 256MB */
 				no-map;
@@ -386,6 +400,12 @@
 				reg = <THB_SLICE_2_UPPER32BITS_ADDR 0x74000000 0x0 0xC000000>; /* 192MB */
 				reusable;
 			};
+			/* Non secure VPU reserved */
+			slice2_vpu_reserved: vpu_reserved@1480000000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_2_UPPER32BITS_ADDR 0x80000000 0x0 0x2000000>; /* 32MB */
+				no-map;
+			};
 		};
 #endif
 
@@ -403,7 +423,7 @@
 			};
 
 			/* Allocate 256MB at fixed location for VPU */
-			slice3_vpu_reserved: vpu_reserved@1684800000 {
+			slice3_vpu_secure: vpu_secure@1684800000 {
 				compatible = "shared-dma-pool";
 				reg = <THB_SLICE_3_UPPER32BITS_ADDR 0x84800000 0x0 0x10000000>; /* 256MB */
 				no-map;
@@ -481,6 +501,12 @@
 				compatible = "shared-dma-pool";
 				reg = <THB_SLICE_3_UPPER32BITS_ADDR 0x74000000 0x0 0xC000000>; /*192MB */
 				reusable;
+			};
+			/* Non secure VPU reserved */
+			slice3_vpu_reserved: vpu_reserved@1680000000 {
+				compatible = "shared-dma-pool";
+				reg = <THB_SLICE_3_UPPER32BITS_ADDR 0x80000000 0x0 0x2000000>; /* 32MB */
+				no-map;
 			};
 		};
 #endif

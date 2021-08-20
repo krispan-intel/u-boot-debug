@@ -11,11 +11,11 @@
 #include <image.h>
 
 /*
- * TODO: change this to a function checking the value of the security fuse bits
- * (once implemented). For the moment we use the value of the SECURE_SKU env
- * variable; if the variable is not set, default value ('1') is returned.
+ * SECURE_SKU env variable is updated to 1 when security fuse
+ * bits are set; if the variable is not set, default value ('0')
+ * is returned.
  */
-#define SECURE_SKU (env_get_ulong("SECURE_SKU", 2, 1))
+#define SECURE_SKU (env_get_ulong("SECURE_SKU", 2, 0))
 
 /*TODO: remove this to get the svn from board. Currently SVN is getting from u-boot env */
 //#define CONFIG_FIT_SVN_STORAGE_ENV 1

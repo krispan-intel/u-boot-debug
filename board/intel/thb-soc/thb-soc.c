@@ -1575,14 +1575,8 @@ void board_preboot_os(void)
 	ocs_hash_alg_t hash_alg;
 
 	/* Update the PAD config for OS */
-	if (board_id == BOARD_TYPE_HDDLF1) {
-		pr_info("Applying EVT1 pad cfg\n");
-		evt1_pad_config();
-	}
-	if (board_id == BOARD_TYPE_HDDLF2) {  /* For Flashless Boot Configuration */
-		pr_info("Applying EVT2 pad cfg\n");
-		evt2_pad_config();
-	}
+	pr_info("Applying pad configuration\n");
+	pcl_pad_config(board_id, thb_full);
 
 	if (board_is_secure()) {
 		/*

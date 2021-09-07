@@ -6,61 +6,40 @@
  */
 #include <linux/io.h>
 #include <asm/arch-thb/gpio.h>
+#include <asm/arch/boot/platform_private.h>
 #include "thb_pad_cfg.h"
+#include "evt1_pcl_header_config_tbh.h"
+#include "evt2_pcl_header_config_tbh.h"
 
-struct pad_control {
-	u32 index;  /* Pin number */
-	u32 offset; /* Offset address */
-	u32 value;  /* Desired value to be configured */
-};
-
-const struct pad_control evt1_pad[] ={
-	{26, 0x068, 0x00170000},
-	{27, 0x06C, 0x00170000},
-	{28, 0x070, 0x00170000},
-	{29, 0x074, 0x00170000},
-	{30, 0x078, 0x00170000},
-	{31, 0x07C, 0x00170000},
-	{42, 0x0A8, 0x00170000},
-	{43, 0x0AC, 0x00170000},
-	{44, 0x0B0, 0x00170000},
-	{45, 0x0B4, 0x00170000},
-	{46, 0x0B8, 0x00170000},
-	{47, 0x0BC, 0x00170000},
-};
-
-const struct pad_control evt2_pad[] = {
-	{9, 0x024, 0x00000104},
-	{14, 0x038, 0x00071504},
-	{15, 0x03C, 0x00170104},
-	{16, 0x040, 0x00170104},
-	{17, 0x044, 0x00170104},
-	{18, 0x048, 0x00000104},
-	{19, 0x04C, 0x00170104},
-	{21, 0x054, 0x00070104},
-	{26, 0x068, 0x00000104},
-	{35, 0x08C, 0x00070104},
-};
-
-void evt1_pad_config()
+void pcl_pad_write_config(const struct pcl_pad_control *config_pad, u32 pad_size)
 {
+/* Added a common function to write all the configurations */
 	u32 pin;
-	u32 number_of_pins = sizeof(evt1_pad)/sizeof(evt1_pad[0]);
-	for (pin = 0; pin < number_of_pins; pin++)
-	{
-		writel(evt1_pad[pin].value, GPIO_BASE_ADDR + evt1_pad[pin].offset);
 
-	}
+	for (pin = 0; pin < pad_size; pin++)
+		writel(config_pad[pin].value, GPIO_BASE_ADDR + (config_pad[pin].index) * 4);
 	readl(GPIO_BASE_ADDR);
 }
 
-void evt2_pad_config()
+void pcl_pad_config(u8 board_id, u8 thb_full)
 {
-	u32 pin;
-	u32 number_of_pins = sizeof(evt2_pad)/sizeof(evt2_pad[0]);
-	for (pin = 0; pin < number_of_pins; pin++)
-	{
-		writel(evt2_pad[pin].value, GPIO_BASE_ADDR + evt2_pad[pin].offset);
+	u32 number_of_pins;
+
+	if (board_id == BOARD_TYPE_HDDLF1 && thb_full) {
+		number_of_pins = ARRAY_SIZE(evt1_full_pad);
+		pr_info("Applying configuration for EVT1 Full\n");
+		pcl_pad_write_config(evt1_full_pad, number_of_pins);
+	} else if (board_id == BOARD_TYPE_HDDLF1 && !thb_full) {
+		number_of_pins = ARRAY_SIZE(evt1_prime_pad);
+		pr_info("Applying configuration for EVT1 Prime\n");
+		pcl_pad_write_config(evt1_prime_pad, number_of_pins);
+	} else if (board_id == BOARD_TYPE_HDDLF2 && thb_full) {
+		number_of_pins = ARRAY_SIZE(evt2_full_pad);
+		pr_info("Applying configuration for EVT2 Full\n");
+		pcl_pad_write_config(evt2_full_pad, number_of_pins);
+	} else if (board_id == BOARD_TYPE_HDDLF2 && !thb_full) {
+		number_of_pins = ARRAY_SIZE(evt2_prime_pad);
+		pr_info("Applying configuration for EVT2 Prime\n");
+		pcl_pad_write_config(evt2_prime_pad, number_of_pins);
 	}
-	readl(GPIO_BASE_ADDR);
 }

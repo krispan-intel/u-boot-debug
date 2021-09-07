@@ -12,16 +12,17 @@
  * more details.
  */
 
-/*
- * evt1_pad_config() - write and read the evt1 GPIO config
- *
- */
-
-void evt1_pad_config(void);
+struct pcl_pad_control {
+	u32 index; /* Pin Number */
+	u32 value; /* Desired value to be configured */
+};
 
 /*
- * evt2_pad_config() - write and read the evt2 GPIO config
- *
+ * pcl_pad_config() - Apply GPIO pad configuration based on board and version(full or prime)
  */
+void pcl_pad_config(u8 board_id, u8 thb_full);
 
-void evt2_pad_config(void);
+/*
+ * pcl_pad_write_config() - Write the configuration to the GPIO pad
+ */
+void pcl_pad_write_config(const struct pcl_pad_control *config_pad, u32 pad_size);

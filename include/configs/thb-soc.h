@@ -36,7 +36,6 @@
 /* DDR base address. */
 #define DDR_BASE (0x1000000000)
 /* Secure DDR usage. */
-#if CONFIG_THUNDERBAY_EVT2_ENABLE
 #define SECURE_DDR_SIZE (SZ_256M)
 #define FLASHLESS_ADDR "0x1240000000"
 #define RAMFS_ADDR     "0x1100000000"
@@ -46,17 +45,6 @@
 #define KERNEL_ADDR_R  "0x1014280000"
 #define FIT_ADDR       "0x10A0000000"
 #define DTB_ADDR       "0x1012000000"
-#else
-#define SECURE_DDR_SIZE (SZ_128M)
-#define FLASHLESS_ADDR "0x1100000000"
-#define RAMFS_ADDR     "0x101C200000"
-#define FDT_HIGH       "0x101A1FFFFF"
-#define INITRD_ADDR    "0x101A200000"
-#define KERNEL_ADDR    "0x100A000000"
-#define KERNEL_ADDR_R  "0x100A000000"
-#define FIT_ADDR       "0x105C200000"
-#define DTB_ADDR       "0x101A000000"
-#endif
 
 /* DDR shared between secure and non-secure world. */
 #define SHARED_DDR_SIZE (SZ_32M)

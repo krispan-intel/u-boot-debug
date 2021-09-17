@@ -9,31 +9,9 @@ config ENABLE_MENDER
 	  Enable this option to apply the changes to U-Boot required to
 	  support mender.io operation on Thunder Bay.
 
-config SYS_TEXT_BASE
-	hex "U-boot load address for EVT2 board"
-	default 0x1010000000 if THUNDERBAY_EVT2_ENABLE
-	default 0x1008000000 if !THUNDERBAY_EVT2_ENABLE
-	help
-	  This option sets the load address of U-boot for
-	  EVT2 board.
-
-config THUNDERBAY_PCIEBOOT_BUF_ADDR
-	hex "PCIE Buffer Address for EVT2 board"
-	default 0x1220000000 if THUNDERBAY_EVT2_ENABLE
-	default 0x101A200000 if !THUNDERBAY_EVT2_ENABLE
-	help
-	  This option sets PCIE buffer address for EVT2
-	  board.
-
 config THUNDERBAY_EMULATION
 	bool "Enable FPGA-specific changes"
 	default y
-
-config THUNDERBAY_EVT2_ENABLE
-	bool "Enable EVT2 board configuration."
-	default n
-	help
-	  When enabled,EVT2 specific memory map will enabled.
 
 config CMD_VPU_BOOT
 	bool "Enable 'vpu' command"
@@ -51,17 +29,6 @@ config THUNDERBAY_MEM_PROTECT
 	  to protect critical assets in RAM (e.g., the Linux Kernel, the Device
 	  Tree, etc.).
 
-if THUNDERBAY_MEM_PROTECT
-
-config THUNDERBAY_MEM_PROTECT_U_BOOT
-	bool "Enable Thunder Bay memory protection on U-Boot."
-	default n
-	help
-	  When enabled, U-Boot will set up an IMR on the U-Boot region, including
-	  stack and malloc areas. However, these stack and malloc areas may be
-	  passed to hardware peripherals to access. This will trigger a reset.
-
-endif
 config  PLATFORM_THUNDERBAY
         bool "Enable support for Thunderbay Platform"
 	help

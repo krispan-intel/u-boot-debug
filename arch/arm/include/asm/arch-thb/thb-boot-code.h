@@ -15,4 +15,5 @@
 #define SECURITY_FAIL_IMR_PREBOOT_OS (0x8)
 #define SECURITY_FAIL_IMR_BOOTM_START (0x9)
 
+extern u8 board_id;
 #endif /* _THB_BOOT_CODE_H */

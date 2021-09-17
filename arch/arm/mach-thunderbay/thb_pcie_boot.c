@@ -12,6 +12,7 @@
 #include <dm/uclass.h>
 #include <linux/printk.h>
 #include <linux/errno.h>
+#include <asm/arch-thb/thb-boot-code.h>
 #include <asm/arch/thb_pcie_boot.h>
 #include <asm/arch/thb_pcie.h>
 #include <asm/arch/thb_shared_mem.h>
@@ -283,9 +284,10 @@ static int do_pcie_recovery(struct cmd_tbl *cmdtp, int flag, int argc,
 
 	pr_info("%s-%d\n",__func__,CONFIG_PCIE_RECOVERY_MMC_DEV);
 #if defined (CONFIG_THUNDERBAY_MEM_PROTECT)
-	thb_imr_pcie_enable_firewall();
+	if (BOARD_TYPE_HDDLF2 == board_id) {
+		thb_imr_pcie_enable_firewall();
+	}
 #endif
-
 	/* Retrieve PCIe EP device. */
 	rc = uclass_get_device_by_driver(UCLASS_MISC,
 					 DM_DRIVER_GET(thb_pcie_ep), &devp);
@@ -420,7 +422,9 @@ exit:
 		return CMD_RET_FAILURE;
 	}
 #if defined (CONFIG_THUNDERBAY_MEM_PROTECT)
-	thb_imr_pcie_disable_firewall();
+	if (BOARD_TYPE_HDDLF2 == board_id) {
+		thb_imr_pcie_disable_firewall();
+	}
 #endif
 	return rc;
 }
@@ -446,11 +450,11 @@ static int do_pcie_boot(struct cmd_tbl *cmdtp, int flag, int argc,
 	struct pcie_iatu_setup_cfg iatu_cfg;
 	char *magic = VPUUBOOT_MAGIC_STRING;
 	int rc;
-
 #if defined (CONFIG_THUNDERBAY_MEM_PROTECT)
-	thb_imr_pcie_enable_firewall();
+	if (BOARD_TYPE_HDDLF2 == board_id) {
+		thb_imr_pcie_enable_firewall();
+	}
 #endif
-
 	if (argc != 3) {
 		pr_err("Unsupported number of arguments.\n");
 		return CMD_RET_FAILURE;
@@ -555,9 +559,10 @@ static int do_pcie_boot(struct cmd_tbl *cmdtp, int flag, int argc,
 		return CMD_RET_FAILURE;
 	}
 #if defined (CONFIG_THUNDERBAY_MEM_PROTECT)
-	thb_imr_pcie_disable_firewall();
+	if (BOARD_TYPE_HDDLF2 == board_id) {
+		thb_imr_pcie_disable_firewall();
+	}
 #endif
-
 	return CMD_RET_SUCCESS;
 }
 

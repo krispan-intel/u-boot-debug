@@ -118,40 +118,6 @@ static int set_up_imr(enum thb_imr imr, u64 tgt_addr, u64 tgt_size,
 				 IMR_MASK_A53_ONLY);
 }
 
-/*
- * This function is called by board_early_init_r() (defined in thb-fpga.c),
- * which in turn is called during U-boot initialization, after relocation (and
- * after board_init()).
- *
- * We use it to:
- * - setup the IMR protecting the relocated U-Boot memory
- * - tear down the temporary IMR set up by BL2 to protect the entire DDR (thus
- *   making it accessible to boot media like eMMC, PCI, etc.).
- */
-int thb_imr_post_u_boot_reloc(void)
-{
-	int rc = 0;
-
-#if defined(CONFIG_THUNDERBAY_MEM_PROTECT_U_BOOT)
-	u64 imr_base, imr_size, u_boot_base, u_boot_size;
-
-	u_boot_base = gd->start_addr_sp - THB_U_BOOT_MAX_STACK_SIZE;
-	u_boot_size = gd->ram_top - u_boot_base;
-
-	/* TODO: IMR not setup for THB yet*/
-#ifndef CONFIG_PLATFORM_THUNDERBAY
-	rc = set_up_imr(U_BOOT_IMR, u_boot_base, u_boot_size, &imr_base,
-			&imr_size);
-	if (rc)
-		return -1;
-#endif
-#endif /* defined(CONFIG_THUNDERBAY_MEM_PROTECT_U_BOOT) */
-
-	/* Remove the global IMR set up by BL2. */
-	/* TODO: For Thunderbay, IMR is disabled.*/
-	return rc;
-}
-
 #if defined(CONFIG_THUNDERBAY_MEM_PROTECT)
 /*
  * This function is called at the beginning of the bootm booting process (i.e.,

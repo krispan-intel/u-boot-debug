@@ -1440,12 +1440,6 @@ int board_init(void)
  */
 int board_early_init_r(void)
 {
-#if defined(CONFIG_THUNDERBAY_MEM_PROTECT)
-	if (thb_imr_post_u_boot_reloc()) {
-		return -1;
-	}
-#endif  /* CONFIG_THUNDERBAY_MEM_PROTECT */
-
 	return 0;
 }
 
@@ -1620,22 +1614,22 @@ void board_preboot_os(void)
 		if (thb_tpm_close()) {
 			board_boot_fail(SECURITY_FAIL_TPM_DEINIT);
 		}
-
 #if defined(CONFIG_THUNDERBAY_MEM_PROTECT)
-		/* Below call will trigger SMC and call BL31 to setup
-		 * Linux runtime firewall and lock the firewall setting.
-		 */
-		printf("%s: Firewall: Set Kernel Firewall\n",__func__);
-		if (thb_imr_preboot_start()) {
-			printf("%s: error: IMR setup failed\n", __func__);
-			hang();
-		}
+		if (BOARD_TYPE_HDDLF2 == board_id) {
+			/* Below call will trigger SMC and call BL31 to setup
+			 * Linux runtime firewall and lock the firewall setting.
+			 */
+			printf("%s: Firewall: Set Kernel Firewall\n", __func__);
+			if (thb_imr_preboot_start()) {
+				printf("%s: error: IMR setup failed\n", __func__);
+				hang();
+			}
 
-		if (thb_imr_preboot_os()) {
-			hang();
+			if (thb_imr_preboot_os()) {
+				hang();
+			}
 		}
 #endif  /* CONFIG_THUNDERBAY_MEM_PROTECT */
-
 	}
 }
 

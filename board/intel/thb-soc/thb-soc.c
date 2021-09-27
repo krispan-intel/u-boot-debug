@@ -447,6 +447,27 @@ static int fdt_thb_i2c3_fixup(void *fdt)
 	return 0;
 }
 
+static int fdt_thb_model_fixup(void *fdt)
+{
+	int model_dev_off = 0, node = 0;
+	int ret;
+
+	model_dev_off = fdt_path_offset(fdt, "/");
+	if(model_dev_off < 0) {
+		log_err("Failed to find model property node.\n");
+		return model_dev_off;
+	}
+
+	if (soc_rev == 0x00)
+		ret = fdt_setprop_string(fdt, model_dev_off, "model", "Intel Thunder Bay A0");
+	else if (soc_rev == 0x01)
+		ret = fdt_setprop_string(fdt, model_dev_off, "model", "Intel Thunder Bay A1");
+	else
+		ret = fdt_setprop_string(fdt, model_dev_off, "model", "Intel Thunder Bay Unknown");
+
+	return 0;
+}
+
 static int fdt_thb_evt2_hddl_fixup(void *fdt, int hddl_dev_off)
 {
 	int node = 0, ret;
@@ -807,6 +828,10 @@ int ft_board_setup(void *fdt, struct bd_info *bd)
 		log_err("Failed to update i2c-3 property\n");
         }
 
+	ret = fdt_thb_model_fixup(fdt);
+	if (ret < 0) {
+		log_err("Failed to update thb-model property\n");
+	}
 
 	return 0;
 }

@@ -765,6 +765,49 @@ static int fdt_thb_boot_info(void *fdt)
 	return 0;
 }
 
+static int fdt_thb_ip_dis(void *fdt)
+{
+	int eth0_dev_off = 0, eth1_dev_off = 0, pcie_rc_dev_off = 0, node = 0;
+	int ret;
+
+	if ((board_id == BOARD_TYPE_HDDLF1) || (board_id == BOARD_TYPE_HDDLF2) || board_id == BOARD_TYPE_CRB2F1) {
+		eth0_dev_off =  fdt_path_offset(fdt, "/soc/ethernet@804F0000");
+		if (eth0_dev_off < 0) {
+			log_err("Failed to find ethernet0 node.\n");
+			return eth0_dev_off;
+		}
+		ret = fdt_setprop_string(fdt, eth0_dev_off, "status", "disabled");
+		if (ret) {
+			log_err("Failed to disable ethernet0 node\n");
+			return ret;
+		}
+
+		eth1_dev_off =  fdt_path_offset(fdt, "/soc/ethernet@80500000");
+		if (eth1_dev_off < 0) {
+			log_err("Failed to find ethernet1 node.\n");
+			return eth1_dev_off;
+		}
+		ret = fdt_setprop_string(fdt, eth1_dev_off, "status", "disabled");
+		if (ret) {
+			log_err("Failed to disable ethernet1 node\n");
+			return ret;
+		}
+
+		pcie_rc_dev_off =  fdt_path_offset(fdt, "/soc/pcie@82400000");
+		if (pcie_rc_dev_off < 0) {
+			log_err("Failed to find pcie rp node.\n");
+			return pcie_rc_dev_off;
+		}
+		ret = fdt_setprop_string(fdt, pcie_rc_dev_off, "status", "disabled");
+		if (ret) {
+			log_err("Failed to disable pcie rp node\n");
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
 /*
  * Add some board-specific data to the FDT before booting the
  * OS.
@@ -832,6 +875,11 @@ int ft_board_setup(void *fdt, struct bd_info *bd)
 	if (ret < 0) {
 		log_err("Failed to update thb-model property\n");
 	}
+
+	ret = fdt_thb_ip_dis(fdt);
+	if (ret < 0) {
+                log_err("Failed to update eth0,eth1,pcie_rc property\n");
+        }
 
 	return 0;
 }
@@ -1385,10 +1433,64 @@ static void setup_boot_mode(void)
 	}
 }
 
+static void ip_dis_clk(void)
+{
+	/* Disable PCIe RP, eMMC, ETH0 and ETH1 IP for EVT1, EVT2 and CRB2 boards */
+	if ((board_id == BOARD_TYPE_HDDLF1) || (board_id == BOARD_TYPE_HDDLF2) || board_id == BOARD_TYPE_CRB2F1) {
+		/* PCIe RP Reset */
+		clrbits_32(PCIE_CPR_PCIE_RST_EN, BIT(4));
+		/* PCIe Clock Gating */
+		setbits_32(CLKSS_PCIE_CLKSS_PCIE_APB_CTRL_45, BIT(6)|BIT(8)|BIT(10)|BIT(12)|BIT(14)|BIT(22)|BIT(24)|BIT(26)|BIT(28));
+		clrbits_32(CLKSS_PCIE_CLKSS_PCIE_APB_CTRL_45, BIT(7)|BIT(9)|BIT(11)|BIT(13)|BIT(15)|BIT(23)|BIT(25)|BIT(27)|BIT(29));
+		setbits_32(CLKSS_PCIE_CLKSS_PCIE_APB_CTRL_46, BIT(4)|BIT(8)|BIT(12));
+		clrbits_32(CLKSS_PCIE_CLKSS_PCIE_APB_CTRL_46, BIT(5)|BIT(9)|BIT(13));
+
+		/* ETH0 IP Reset */
+		clrbits_32(PSS_CPR_ETHERNET_INST0_RST_EN, BIT(0));
+		/* ETH0 Clock Gating */
+		setbits_32(CLKSS_ETH_APB_CTRL_20, BIT(1));
+		clrbits_32(CLKSS_ETH_APB_CTRL_20, BIT(0));
+		setbits_32(CLKSS_ETH_APB_CTRL_21, BIT(1));
+		clrbits_32(CLKSS_ETH_APB_CTRL_21, BIT(0));
+		setbits_32(CLKSS_ETH_APB_CTRL_22, BIT(1));
+                clrbits_32(CLKSS_ETH_APB_CTRL_22, BIT(0));
+		setbits_32(CLKSS_ETH_APB_CTRL_23, BIT(1));
+                clrbits_32(CLKSS_ETH_APB_CTRL_23, BIT(0));
+		setbits_32(CLKSS_ETH_APB_CTRL_24, BIT(1));
+                clrbits_32(CLKSS_ETH_APB_CTRL_24, BIT(0));
+
+		/* ETH1 IP Reset */
+		clrbits_32(PSS_CPR_ETHERNET_INST1_RST_EN, BIT(0));
+		/* ETH1 Clock Gating */
+		setbits_32(CLKSS_ETH_APB_CTRL_20, BIT(3));
+		clrbits_32(CLKSS_ETH_APB_CTRL_20, BIT(2));
+		setbits_32(CLKSS_ETH_APB_CTRL_21, BIT(3));
+                clrbits_32(CLKSS_ETH_APB_CTRL_21, BIT(2));
+		setbits_32(CLKSS_ETH_APB_CTRL_25, BIT(1));
+		clrbits_32(CLKSS_ETH_APB_CTRL_25, BIT(0));
+		setbits_32(CLKSS_ETH_APB_CTRL_22, BIT(3));
+		clrbits_32(CLKSS_ETH_APB_CTRL_22, BIT(2));
+		setbits_32(CLKSS_ETH_APB_CTRL_23, BIT(3));
+		clrbits_32(CLKSS_ETH_APB_CTRL_23, BIT(2));
+
+		setbits_32(PSS_CPR_MISC_CLK_REG_0, BIT(1));
+		clrbits_32(PSS_CPR_MISC_CLK_REG_0, BIT(0));
+		setbits_32(CLKSS_ETH_APB_CTRL_22, BIT(5));
+                clrbits_32(CLKSS_ETH_APB_CTRL_22, BIT(4));
+
+		/* eMMC IP Reset */
+		clrbits_32(PSS_CPR_EMMC_RST_EN, BIT(0));
+		/* eMMC Clock Gating */
+		setbits_32(PSS_CPR_EMMC_CLK_GATING, BIT(1)|BIT(3)|BIT(5)|BIT(7));
+		clrbits_32(PSS_CPR_EMMC_CLK_GATING, BIT(0)|BIT(2)|BIT(4)|BIT(6));
+	}
+}
+
 int misc_init_r(void)
 {
 	setup_fdt();
 	setup_boot_mode();
+	ip_dis_clk();
 
 	return 0;
 }

@@ -216,6 +216,7 @@ typedef struct {
 	const char mrc_ver[5]; /* Memory Reference Code version */
 	const uint8_t dram_mem; /* Total dram memory */
 	const uint8_t boot_mode; /* Boot mode */
+	const uint8_t measured_boot; /* Measured boot */
 	const uint8_t soc_rev; /* soc revision */
 	const uint8_t soc_id; /* soc id 0 for THB full and 1 for THB prime */
 	const uint8_t io_exp_addr_bits; /* io expander address bit */

@@ -163,6 +163,7 @@ static const struct fdt_string_prop
 
 static platform_boot_intf_t boot_interface = MA_BOOT_INTF_EMMC;
 static uint8_t boot_mode __attribute__ ((section(".data")));
+static uint8_t measured_boot __attribute__ ((section(".data")));
 static uint8_t soc_rev __attribute__ ((section(".data")));
 
 static void fdt_dram_mem(uint64_t size)
@@ -648,6 +649,7 @@ static int fdt_thb_boot_info(void *fdt)
 	char *fdt_boot_intf = NULL;
 	char *fdt_soc_rev = NULL;
 	char *fdt_boot_mode = NULL;
+	char *fdt_measured_boot = NULL;
 	char *fdt_soc_cfg = NULL;
 	u8 mem_rank = 0;
 	u8 mem_density = 0;
@@ -676,6 +678,11 @@ static int fdt_thb_boot_info(void *fdt)
 		fdt_boot_mode = "Open boot";
 	else
 		fdt_boot_mode = "Secure boot";
+
+	if (measured_boot)
+		fdt_measured_boot = "Measured boot enabled";
+	else
+		fdt_measured_boot = "Measured boot disabled";
 
 	if (soc_rev == 0x00)
 		fdt_soc_rev = "THB(A0)";
@@ -731,6 +738,12 @@ static int fdt_thb_boot_info(void *fdt)
 		log_err("Failed to update boot mode in boot_info node\n");
 		return ret;
 	}
+
+	ret = fdt_setprop_string(fdt, boot_info_off, "measured_boot", fdt_measured_boot);
+        if (ret) {
+                log_err("Failed to update measured boot in boot_info node\n");
+                return ret;
+        }
 
 	ret = fdt_setprop_string(fdt, boot_info_off, "mrc_ver", fdt_mrc_version);
 	if (ret) {
@@ -1782,6 +1795,7 @@ phys_size_t get_effective_memsize(void)
 	boot_mode = plat_bl_ctx.boot_mode; /* Update here to avoid calling bl_ctx multiple times*/
 	board_id = plat_bl_ctx.board_id;
 	soc_rev = plat_bl_ctx.soc_rev;
+	measured_boot = plat_bl_ctx.measured_boot;
 	memcpy(fdt_mrc_version, plat_bl_ctx.mrc_ver, MRC_VER_LEN);
 
 	if (board_id == BOARD_TYPE_CRB2F1)  /* For Flashless Boot Configuration */

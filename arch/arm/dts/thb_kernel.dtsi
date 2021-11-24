@@ -2595,6 +2595,14 @@
 			};
 		};
 
+		vpumm0_mm@0 {
+			compatible = "intel,vpumm";
+
+			/* 2-GB SOC level memory - DDR */
+			intel,smmu_params = <0x80000000 0x8 0x80000000 0x80000000 (IOMMU_READ|IOMMU_WRITE)>;
+			iommus = <&vpu_smmu0 47>;
+               };
+
 		xlink-core {
 			compatible = "intel,keembay-xlink";
 		};

@@ -221,6 +221,7 @@ typedef struct {
 	const uint8_t soc_id; /* soc id 0 for THB full and 1 for THB prime */
 	const uint8_t io_exp_addr_bits; /* io expander address bit */
 	dts_calib_off_t dts_calibs; /* Calibration offsets for dts sensors */
+	uint64_t ult_info; /* Unit Level Traceability */
 } platform_bl_ctx_t;
 
 /**

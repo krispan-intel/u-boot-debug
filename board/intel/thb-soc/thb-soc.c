@@ -68,6 +68,7 @@
 
 #define SZ_8G                           0x200000000
 #define BUFF_LEN			6
+#define ULT_BUFF_LEN			20
 #define DRAM_SZ_LEN			10
 #define MRC_VER_LEN			5
 
@@ -84,6 +85,7 @@ phys_size_t get_effective_memsize(void);
 u8 board_type_crb2 __attribute__ ((section(".data")));
 u8 board_type_hddl __attribute__ ((section(".data")));
 u8 board_id __attribute__ ((section(".data")));
+u64 ult_info __attribute__ ((section(".data")));
 
 /* Mapping of TBH Prime Slices and Memory Cfg */
 u8 slice_mem_map[SLICE_INDEX][MEM_INDEX] __attribute__ ((section(".data")));
@@ -656,6 +658,7 @@ static int fdt_thb_boot_info(void *fdt)
 	char fdt_board_id[BUFF_LEN];
 	char fdt_mem_rank[BUFF_LEN];
 	char fdt_mem_density[BUFF_LEN];
+	char fdt_ult_info[ULT_BUFF_LEN];
 
 	boot_info_off =  fdt_path_offset(fdt, "/boot_info");
 	if (boot_info_off < 0) {
@@ -706,6 +709,7 @@ static int fdt_thb_boot_info(void *fdt)
 	snprintf(fdt_board_id, BUFF_LEN, "0x%02x", board_id);
 	snprintf(fdt_mem_rank, BUFF_LEN, "0x%02x", mem_rank);
 	snprintf(fdt_mem_density, BUFF_LEN, "0x%02x", mem_density);
+	snprintf(fdt_ult_info, ULT_BUFF_LEN, "0x%llx", ult_info);
 
 	fdt_dram_mem(total_mem);
 
@@ -772,6 +776,12 @@ static int fdt_thb_boot_info(void *fdt)
 	ret = fdt_setprop_string(fdt, boot_info_off, "soc_cfg", fdt_soc_cfg);
 	if (ret) {
 		log_err("Failed to update soc config in boot_info node\n");
+		return ret;
+	}
+
+	ret = fdt_setprop_string(fdt, boot_info_off, "ult_val", fdt_ult_info);
+	if (ret) {
+		log_err("Failed to update ult value in boot_info node\n");
 		return ret;
 	}
 
@@ -1796,6 +1806,7 @@ phys_size_t get_effective_memsize(void)
 	board_id = plat_bl_ctx.board_id;
 	soc_rev = plat_bl_ctx.soc_rev;
 	measured_boot = plat_bl_ctx.measured_boot;
+	ult_info = plat_bl_ctx.ult_info;
 	memcpy(fdt_mrc_version, plat_bl_ctx.mrc_ver, MRC_VER_LEN);
 
 	if (board_id == BOARD_TYPE_CRB2F1)  /* For Flashless Boot Configuration */

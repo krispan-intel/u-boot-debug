@@ -450,6 +450,36 @@ static int fdt_thb_i2c3_fixup(void *fdt)
 	return 0;
 }
 
+/*
+ * SPI0 is not used in evt2 board, however it is used in
+ * other board variants.
+ *
+ * SPI0 node will be 'okay' in dts file, however it will be
+ * disabled for evt2 in fdt_thb_spi0_fixup
+ */
+static int fdt_thb_spi0_fixup(void *fdt)
+{
+	int spi_dev_off = 0;
+	int ret;
+
+	spi_dev_off =  fdt_path_offset(fdt, "/soc/spi@80520000");
+	if (spi_dev_off < 0) {
+		log_err("Failed to find spi0 node.\n");
+		return spi_dev_off;
+	}
+
+	/* BOARD_TYPE_HDDLF2 is for EVT2 */
+	if (board_id == BOARD_TYPE_HDDLF2) {
+		ret = fdt_setprop_string(fdt, spi_dev_off, "status", "disabled");
+		if (ret) {
+			log_err("Failed to update status of spi0.\n");
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
 static int fdt_thb_model_fixup(void *fdt)
 {
 	int model_dev_off = 0, node = 0;
@@ -883,6 +913,10 @@ int ft_board_setup(void *fdt, struct bd_info *bd)
 	if (ret < 0) {
 		log_err("Failed to update i2c-1 property\n");
 	}
+
+	ret = fdt_thb_spi0_fixup(fdt);
+	if (ret < 0)
+		log_err("Failed to update spi-0 property\n");
 
 	ret = fdt_thb_boot_info(fdt);
 	if (ret < 0) {

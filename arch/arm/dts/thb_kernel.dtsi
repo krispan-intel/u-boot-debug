@@ -4231,12 +4231,13 @@
                         compatible = "intel,thunderbay-pcie-ep";
                         #address-cells = <2>;
                         #size-cells = <2>;
-			reg = <0x00 0x82000000 0x00 0x400000
+			reg = <0x00 0x82000000 0x00 0x380000
+				0x0 0x82380000 0x0 0x80000
 				0x20 0x00 0x00 0x1000000
 				0x00 0x828b0000 0x00 0x800000
 				0x0 0x88800000 0x0 0x10000
 				0x0 0x88808000 0x0 0x50 >;
-			reg-names = "dbi\0addr_space\0apb\0doorbell\0doorbellclr";
+			reg-names = "dbi\0dma\0addr_space\0apb\0doorbell\0doorbellclr";
                         memory-region = <
 					 #if (THB_SLICE_0_EN)
 					 &slice0_f0_pcie_bar_2 &slice0_f0_pcie_bar_4 &slice0_f1_pcie_bar_2 &slice0_f1_pcie_bar_4
